@@ -21,81 +21,81 @@
 
 enum TokenTypes
 {
-	Token_Unknown,
-	Token_SpecialProcess,
-	Token_Template,
-	Token_TemplateStart,
-	Token_TemplateEnd,
-	Token_TemplateTypeName,
-	Token_TemplateName,
-	Token_TemplateNameStatement,
-	Token_TemplateTypeIndicator,
-	Token_Comment,
-	Token_GenStructName,
-	Token_TemplateType,
-	Token_Identifier,
-	Token_Whitespace,
-	Token_ParentheticalOpen,
-	Token_ParentheticalClose,
-	Token_BracketOpen,
-	Token_BracketClose,
-	Token_Semicolon,
-	Token_FeedSymbol,
-	Token_EndOfFile,
+    Token_Unknown,
+    Token_SpecialProcess,
+    Token_Template,
+    Token_TemplateStart,
+    Token_TemplateEnd,
+    Token_TemplateTypeName,
+    Token_TemplateName,
+    Token_TemplateNameStatement,
+    Token_TemplateTypeIndicator,
+    Token_Comment,
+    Token_GenStructName,
+    Token_TemplateType,
+    Token_Identifier,
+    Token_Whitespace,
+    Token_ParentheticalOpen,
+    Token_ParentheticalClose,
+    Token_BracketOpen,
+    Token_BracketClose,
+    Token_Semicolon,
+    Token_FeedSymbol,
+    Token_EndOfFile,
 };
 
 struct Token
 {
-	enum TokenTypes token_type;
-	char *token_data;
+    enum TokenTypes token_type;
+    char *token_data;
 };
 
 struct Tokenizer
 {
-	u32 token_num;
-	struct Token *tokens;
-	struct Token *at;
+    u32 token_num;
+    struct Token *tokens;
+    struct Token *at;
 };
 
 struct Template
 {
-	char *template_name;
-	char *template_type_name;
+    char *template_name;
+    char *template_type_name;
 
-	struct Tokenizer tokenizer;
+    struct Tokenizer tokenizer;
 
-	/* in case of name collisions */
-	struct Template *next;
+    /* in case of name collisions */
+    struct Template *next;
 };
 
 struct TemplateHashTable
 {
-	struct Template *templates;
-	u32 num;
+    struct Template *templates;
+    u32 num;
 };
 
 struct MemoryArena
 {
-	void *memory;
+    void *memory;
 
-	u32 offset;
-	u32 size;
-	u32 size_left;
+    u32 offset;
+    u32 size;
+    u32 size_left;
 };
 
 struct TypeRequest
 {
-	char *template_name;
+    char *template_name;
 
-	char *type_name;
-	char *struct_name;
+    char *type_name;
+    char *struct_name;
 };
 
 struct TemplateTypeRequest
 {
-	struct TypeRequest *type_requests;
+    struct TypeRequest *type_requests;
 
-	u32 request_num;
+    u32 request_num;
 };
 
 static struct MemoryArena arena = {0};

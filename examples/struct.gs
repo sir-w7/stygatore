@@ -1,4 +1,4 @@
-~output_ext .h
+~output_ext .c
 
 @template_start Vec4 <- T
 typedef struct @template_name @template_name;
