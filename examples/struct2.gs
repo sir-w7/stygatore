@@ -1,4 +1,4 @@
-~output_ext .h
+@output linked_list.h
 
 @template_start Linked_List <- T
 typedef struct @template_name

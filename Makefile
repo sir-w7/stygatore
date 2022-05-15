@@ -8,16 +8,16 @@ C = clang
 SRC_FILES = code/stygatore.c
 OUTPUT_EXE = build/stygatore
 
-all: build build/stygatore
-
-build/stygatore: code/stygatore.c code/linux/linux_platform.c code/linux/linux_platform.h
+build/stygatore: build code/stygatore.c code/linux/linux_platform.c code/linux/linux_platform.h
 	$(C) -g $(SRC_FILES) -o $(OUTPUT_EXE)
 
 build:
 	mkdir build
 
-.PHONY: clean
+.PHONY: clean test
 clean:
 	rm -rf build/*
 
+test:
+	./build/stygatore ./examples/struct.gs ./examples/struct2.gs
 # end

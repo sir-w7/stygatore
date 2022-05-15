@@ -2,6 +2,10 @@
 /* TODO(winston): efficient memory usage */
 /* TODO(winston): one-pass lexing */
 
+/* TODO(sir->w7): A strong powerful string type for easier parsing. */
+// TODO(sir->w7): Template concatenation for even more powerful templates.
+
+// Should we not do a unity build to conform to modern standards?
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,10 +23,10 @@
 #define alloc_array(size, array_num) arena_alloc(size * array_num)
 #define tokenizer_at(tokenizer) ((tokenizer)->at)
 
+typedef enum TokenTypes TokenTypes;
 enum TokenTypes
 {
     Token_Unknown,
-    Token_SpecialProcess,
     Token_Template,
     Token_TemplateStart,
     Token_TemplateEnd,
@@ -44,12 +48,14 @@ enum TokenTypes
     Token_EndOfFile,
 };
 
+typedef struct Token Token;
 struct Token
 {
     enum TokenTypes token_type;
     char *token_data;
 };
 
+typedef struct Tokenizer Tokenizer;
 struct Tokenizer
 {
     u32 token_num;
@@ -57,6 +63,7 @@ struct Tokenizer
     struct Token *at;
 };
 
+typedef struct Template Template;
 struct Template
 {
     char *template_name;
@@ -65,15 +72,17 @@ struct Template
     struct Tokenizer tokenizer;
 
     /* in case of name collisions */
-    struct Template *next;
+    Template *next;
 };
 
+typedef struct TemplateHashTable TemplateHashTable;
 struct TemplateHashTable
 {
-    struct Template *templates;
+    Template *templates;
     u32 num;
 };
 
+typedef struct MemoryArena MemoryArena;
 struct MemoryArena
 {
     void *memory;
@@ -83,6 +92,7 @@ struct MemoryArena
     u32 size_left;
 };
 
+typedef struct TypeRequest TypeRequest;
 struct TypeRequest
 {
     char *template_name;
@@ -91,15 +101,16 @@ struct TypeRequest
     char *struct_name;
 };
 
+typedef struct TemplateTypeRequest TemplateTypeRequest;
 struct TemplateTypeRequest
 {
-    struct TypeRequest *type_requests;
+    TypeRequest *type_requests;
 
     u32 request_num;
 };
 
-static struct MemoryArena arena = {0};
-static char file_ext[16];
+static MemoryArena arena = {0};
+static char output_filename[128];
 
 /* djb2 hash function for string hashing */
 static u64
@@ -186,7 +197,7 @@ copy_string_range(char *input_string, char *output_string,
   utility function for print_token_string
 */
 static void
-print_token_type(struct Token token, FILE *file)
+print_token_type(Token token, FILE *file)
 {
     switch (token.token_type) {
 #define token_print_case(token_const)           \
@@ -224,7 +235,7 @@ print_token_type(struct Token token, FILE *file)
   Returns FALSE if end of file and TRUE if anything else.
 */
 static b8
-print_token_string(struct Token token, FILE *file)
+print_token_string(Token token, FILE *file)
 {
     if (token.token_type == Token_EndOfFile) {
         return FALSE;
@@ -257,7 +268,7 @@ print_token_string(struct Token token, FILE *file)
 
 /* prints the at pointer of the tokenizer */
 static void
-print_tokenizer_at(struct Tokenizer *tokenizer, FILE *file)
+print_tokenizer_at(Tokenizer *tokenizer, FILE *file)
 {
     print_token_type(*(tokenizer->at), file);
     print_token_string(*(tokenizer->at), file);
@@ -266,7 +277,7 @@ print_tokenizer_at(struct Tokenizer *tokenizer, FILE *file)
 
 /* resets the at pointer of the tokenizer to the starting point */
 static void
-reset_tokenizer(struct Tokenizer *tokenizer)
+reset_tokenizer(Tokenizer *tokenizer)
 {
     tokenizer->at = tokenizer->tokens;
 }
@@ -277,7 +288,7 @@ reset_tokenizer(struct Tokenizer *tokenizer)
   Returns TRUE if successfully incremented
 */
 static b8
-increment_tokenizer_no_whitespace(struct Tokenizer *tokenizer)
+increment_tokenizer_no_whitespace(Tokenizer *tokenizer)
 {
     do {
         if (tokenizer_at(tokenizer)->token_type == Token_EndOfFile ||
@@ -297,7 +308,7 @@ increment_tokenizer_no_whitespace(struct Tokenizer *tokenizer)
   Returns TRUE if successfully incremented
 */
 static b8
-increment_tokenizer_all(struct Tokenizer *tokenizer)
+increment_tokenizer_all(Tokenizer *tokenizer)
 {
     if (tokenizer_at(tokenizer)->token_type == Token_EndOfFile ||
         (tokenizer_at(tokenizer) - tokenizer->tokens) >= tokenizer->token_num) {
@@ -312,7 +323,7 @@ increment_tokenizer_all(struct Tokenizer *tokenizer)
   Writes contents of a template to specified file
 */
 static void
-write_template_to_file(struct Template *templates, FILE *file)
+write_template_to_file(Template *templates, FILE *file)
 {
     reset_tokenizer(&templates->tokenizer);
     
@@ -337,7 +348,7 @@ write_template_to_file(struct Template *templates, FILE *file)
   Returns a u32 with the number of templates in file
 */
 static u32
-get_number_of_templates(struct Tokenizer *tokenizer)
+get_number_of_templates(Tokenizer *tokenizer)
 {
     u32 count = 0;
     
@@ -356,10 +367,10 @@ get_number_of_templates(struct Tokenizer *tokenizer)
 /*
   Gets the template name
   Takes in a tokenizer where the tokens pointer points to the first
-  struct Token in the template
+  Token in the template
 */
 static char *
-get_template_name(struct Tokenizer *tokenizer)
+get_template_name(Tokenizer *tokenizer)
 {
     char *template_name = 0;
     
@@ -381,7 +392,7 @@ get_template_name(struct Tokenizer *tokenizer)
   Returns the name of template
 */
 static char *
-get_template_type_name(struct Tokenizer *tokenizer)
+get_template_type_name(Tokenizer *tokenizer)
 {
     char *type_name = 0;
     reset_tokenizer(tokenizer);
@@ -399,22 +410,22 @@ get_template_type_name(struct Tokenizer *tokenizer)
 }
 
 /*
-  Gets struct struct Template from tokenizer where tokenizer starts at the
+  Gets struct Template from tokenizer where tokenizer starts at the
   start of the template
 
   TODO (winston): complete this function and maybe implement a more
   versatile usage where the parameter does not have to point to the first
   token in the template.
 */
-static struct Template
-get_template_from_tokens(struct Tokenizer *tokenizer)
+static Template
+get_template_from_tokens(Tokenizer *tokenizer)
 {
-    struct Template template = {0};
+    Template template = {0};
     
     template.template_name = get_template_name(tokenizer);
     template.template_type_name = get_template_type_name(tokenizer);
     
-    struct Tokenizer template_tokenizer = {0};
+    Tokenizer template_tokenizer = {0};
     template_tokenizer.tokens = tokenizer->at;
     
     u32 range_start = 0;;
@@ -438,23 +449,23 @@ get_template_from_tokens(struct Tokenizer *tokenizer)
 /*
   Constructs a hash table from a file tokenizer
 */
-static struct TemplateHashTable
-get_template_hash_table(struct Tokenizer *tokenizer)
+static TemplateHashTable
+get_template_hash_table(Tokenizer *tokenizer)
 {
-    struct TemplateHashTable hash_table = {0};
+    TemplateHashTable hash_table = {0};
     hash_table.num = get_number_of_templates(tokenizer);
     hash_table.templates =
         alloc_array(sizeof(*hash_table.templates), hash_table.num);
     
     do {
         if (tokenizer_at(tokenizer)->token_type == Token_TemplateStart) {
-            struct Tokenizer template_tokenizer = {0};
+            Tokenizer template_tokenizer = {0};
             template_tokenizer.token_num =
                 tokenizer->tokens + tokenizer->token_num - tokenizer->at;
             template_tokenizer.tokens = tokenizer->at;
             template_tokenizer.at = tokenizer->at;
             
-            struct Template template =
+            Template template =
                 get_template_from_tokens(&template_tokenizer);
             
             u32 bucket = get_hash(template.template_name) % hash_table.num;
@@ -464,7 +475,7 @@ get_template_hash_table(struct Tokenizer *tokenizer)
                 continue;
             }
             
-            struct Template template_at =
+            Template template_at =
                 hash_table.templates[bucket];
             for (;;) {
                 if (template_at.next != 0) {
@@ -487,10 +498,10 @@ get_template_hash_table(struct Tokenizer *tokenizer)
   This looks up the definition of the template in the template hash table.
 */
 
-static struct Template
-lookup_hash_table(char *template_name, struct TemplateHashTable *hash_table)
+static Template
+lookup_hash_table(char *template_name, TemplateHashTable *hash_table)
 {
-    struct Template template = {0};
+    Template template = {0};
     u32 bucket = get_hash(template_name) % hash_table->num;
     
     template = hash_table->templates[bucket];
@@ -512,7 +523,7 @@ lookup_hash_table(char *template_name, struct TemplateHashTable *hash_table)
   To speed up things
 */
 static u32
-get_number_of_template_type_requests(struct Tokenizer *tokenizer)
+get_number_of_template_type_requests(Tokenizer *tokenizer)
 {
     u32 increment_thing = 0;
     
@@ -530,10 +541,10 @@ get_number_of_template_type_requests(struct Tokenizer *tokenizer)
 /*
   Gets the type of template requested
 */
-static struct TemplateTypeRequest
-get_template_type_requests(struct Tokenizer *file_tokens)
+static TemplateTypeRequest
+get_template_type_requests(Tokenizer *file_tokens)
 {
-    struct TemplateTypeRequest type_request = {0};
+    TemplateTypeRequest type_request = {0};
     
     type_request.request_num =
         get_number_of_template_type_requests(file_tokens);
@@ -545,7 +556,7 @@ get_template_type_requests(struct Tokenizer *file_tokens)
     u32 index = 0;
     do {
         if (tokenizer_at(file_tokens)->token_type == Token_Template) {
-            struct TypeRequest type_request_at = {0};
+            TypeRequest type_request_at = {0};
             
             do {
                 increment_tokenizer_no_whitespace(file_tokens);
@@ -582,7 +593,7 @@ get_template_type_requests(struct Tokenizer *file_tokens)
   Replace the type name in a template
 */
 static void
-replace_type_name(struct Template *templates, char *type_name, char *struct_name)
+replace_type_name(Template *templates, char *type_name, char *struct_name)
 {
     reset_tokenizer(&templates->tokenizer);
     char *type_name_real = arena_alloc(strlen(type_name));
@@ -609,7 +620,7 @@ replace_type_name(struct Template *templates, char *type_name, char *struct_name
   or to the next semicolon or parenthesis
 */
 static char *
-get_string_to_next_whitespace(struct Token *tokens,
+get_string_to_next_whitespace(Token *tokens,
                               char *file_data,
                               u32 *start_index)
 {
@@ -646,7 +657,7 @@ get_string_to_next_whitespace(struct Token *tokens,
   and null-terminates at the next whitespace
 */
 static char *
-get_string_to_next_non_whitespace(struct Token *tokens,
+get_string_to_next_non_whitespace(Token *tokens,
                                   char *file_data,
                                   u32 *start_index)
 {
@@ -683,22 +694,22 @@ get_string_to_next_non_whitespace(struct Token *tokens,
   TODO (winston): split this into multiple functions
   to shorten main function
 */
-static struct Tokenizer
+static Tokenizer
 tokenize_file_data(char *file_data)
 {
     if(file_data == 0) {
-        return (struct Tokenizer){0};
+        return (Tokenizer){0};
     }
     
     u32 file_data_length = strlen(file_data) + 1;
     
-    struct Tokenizer tokenizer = {0};
+    Tokenizer tokenizer = {0};
     
-    struct Token *tokens =
+    Token *tokens =
         alloc_array(sizeof(*tokens), file_data_length);
     
     for (u32 i = 0; i < file_data_length; ++i) {
-        struct Token token = {0};
+        Token token = {0};
         
         switch (file_data[i]) {
         case '\n':
@@ -706,9 +717,6 @@ tokenize_file_data(char *file_data)
         case ' ':
         case '\t':
             token.token_type = Token_Whitespace;
-            break;
-        case '~':
-            token.token_type = Token_SpecialProcess;
             break;
         case '@':
             token.token_type = Token_Template;
@@ -747,7 +755,6 @@ tokenize_file_data(char *file_data)
         case Token_Template:
         case Token_Semicolon:
         case Token_Identifier:
-        case Token_SpecialProcess:
             tokens[counter].token_type = tokens[i].token_type;
             token_string = get_string_to_next_whitespace(tokens, file_data, &i);
             break;
@@ -784,7 +791,7 @@ tokenize_file_data(char *file_data)
         if (tokens[i].token_data[0] == '/' &&
             tokens[i].token_data[1] == '/') {
             do {
-                enum TokenTypes type_before = tokens[i].token_type;
+                TokenTypes type_before = tokens[i].token_type;
                 tokens[i].token_type = Token_Comment;
                 
                 if (type_before == Token_Whitespace) {
@@ -805,7 +812,7 @@ tokenize_file_data(char *file_data)
         if (tokens[i].token_data[0] == '/' &&
             tokens[i].token_data[1] == '*') {
             do {
-                enum TokenTypes type_before = tokens[i].token_type;
+                //TokenTypes type_before = tokens[i].token_type;
                 tokens[i].token_type = Token_Comment;
                 
                 b32 is_end_of_comment = FALSE;
@@ -830,6 +837,11 @@ tokenize_file_data(char *file_data)
             } else if (strcmp(tokens[i].token_data, "@template_name") == 0) {
                 tokens[i].token_type = Token_TemplateNameStatement;
             } else if (strcmp(tokens[i].token_data, "@template") == 0) {
+            } else if (strcmp(tokens[i].token_data, "@output") == 0) {
+                // A hack for now, I guess.
+                tokens[i].token_type = Token_Identifier;
+                while (tokens[++i].token_type == Token_Whitespace);
+                strcpy(output_filename, tokens[i].token_data);
             } else {
                 fprintf(stderr, "Unrecognized keyword: %s\n",
                         tokens[i].token_data);
@@ -843,13 +855,6 @@ tokenize_file_data(char *file_data)
             tokens[i].token_type = Token_FeedSymbol;
         } else if (strcmp(tokens[i].token_data, "->") == 0) {
             tokens[i].token_type = Token_TemplateTypeIndicator;
-        }
-        
-        if (tokens[i].token_type == Token_SpecialProcess) {
-            if (strcmp(tokens[i].token_data, "~output_ext") == 0) {
-                while (tokens[++i].token_type == Token_Whitespace);
-                strcpy(file_ext, tokens[i].token_data);
-            }
         }
     }
     
@@ -1026,7 +1031,7 @@ gen_code(u32 arg_count, char **args)
             continue;
         }
         
-        struct Tokenizer tokenizer = tokenize_file_data(file_contents);
+        Tokenizer tokenizer = tokenize_file_data(file_contents);
         
         if (tokenizer.tokens == 0) {
             fprintf(stderr, "Failed to compile file.\n");
@@ -1034,22 +1039,23 @@ gen_code(u32 arg_count, char **args)
             continue;
         }
         
-        if (file_ext[0] == '\0') {
+        if (output_filename[0] == '\0') {
             strcat(output_file_path, ".h");
         } else {
-            strcat(output_file_path, file_ext);
+            strcpy(output_file_path, file_working_dir);
+            strcat(output_file_path, output_filename);
         }
         
-        struct TemplateHashTable hash_table =
+        TemplateHashTable hash_table =
             get_template_hash_table(&tokenizer);
         
-        struct TemplateTypeRequest type_request =
+        TemplateTypeRequest type_request =
             get_template_type_requests(&tokenizer);
         
         FILE *output_file = fopen(output_file_path, "w");
         
         for (u32 i = 0; i < type_request.request_num; ++i) {
-            struct Template template_at =
+            Template template_at =
                 lookup_hash_table(type_request.type_requests[i].template_name,
                                   &hash_table);
             
@@ -1066,7 +1072,7 @@ gen_code(u32 arg_count, char **args)
         
         fclose(output_file);
 
-        file_ext[0] = '\0';
+        output_filename[0] = '\0';
         clear_arena();
         printf("%s -> %s\n", file_path, output_file_path);
     }
