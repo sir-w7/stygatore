@@ -2,8 +2,8 @@
 #include <windows.h>
 #include <stdint.h>
 
-#include "win32_platform.h"
-#include "layer.h"
+#include "../win32_platform.h"
+#include "../layer.h"
 
 global LARGE_INTEGER performance_frequency;
 

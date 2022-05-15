@@ -2,10 +2,9 @@
 #include <sys/mman.h>
 
 #include "../layer.h"
-#include "linux_platform.h"
+#include "../platform.h"
 
-static f32
-get_time()
+f32 get_time()
 {
 	struct timespec time_spec_thing = {0};
 	clock_gettime(CLOCK_REALTIME, &time_spec_thing);
@@ -14,14 +13,12 @@ get_time()
 	return seconds_elapsed;
 }
 
-static void *
-request_mem(u32 size)
+void *reserve_mem(u64 size)
 {
 	return mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 }
 
-static void 
-free_mem(void *mem, u32 size)
+void free_mem(void *mem, u64 size)
 {
     munmap(mem, size);
 }
