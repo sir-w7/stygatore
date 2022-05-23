@@ -47,12 +47,19 @@ b32 is_dir(struct str8 path)
 	return S_ISDIR(path_stat.st_mode);
 }
 
+struct str8 
+get_file_abspath(struct memory_arena *allocator, struct str8 file_path)
+{
+	static char buffer[256];
+	realpath(file_path.str, buffer);
+	return push_str8_copy(allocator, str8_from_cstr(buffer));
+}
+
 struct str8list 
 get_dir_list_ext(struct memory_arena *allocator, 
 		 struct str8 dir_path, struct str8 ext)
 {
 	struct str8list dir_file_list = {0};
-	char buffer[256];
 
 	DIR *dir = opendir(dir_path.str);	
 	if (dir == NULL) {
@@ -64,17 +71,16 @@ get_dir_list_ext(struct memory_arena *allocator,
 	while ((dir_entry = readdir(dir)) != NULL) {
 		struct str8 filename = str8_from_cstr(dir_entry->d_name);
 		if (dir_entry->d_type == DT_REG &&
-			str8_compare(file_ext(filename), str8_lit("styxgen"))) {
+			str8_compare(file_ext(filename), ext)) {
 			// For loop-based defer macro to simplify this interface.
 			struct temp_arena scratch = begin_temp_arena(allocator); 
 			
 			struct str8 file_rel = push_str8_concat(allocator, dir_path, str8_lit("/"));
 			file_rel = push_str8_concat(allocator, file_rel, filename);
-			realpath(file_rel.str, buffer);
 
 			end_temp_arena(&scratch);
 
-			struct str8 file_path = push_str8_copy(allocator, str8_from_cstr(buffer));
+			struct str8 file_path = get_file_abspath(allocator, file_rel);
 			str8list_push(&dir_file_list, allocator, file_path);
 		}
 	}

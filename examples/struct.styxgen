@@ -1,42 +1,52 @@
 @output vector.h
 
 @template Vec4 <- T
-typedef struct @template_name @template_name;
-struct @template_name
+// Do we want to output comments like this into the output file?
+// No, the template file is meant for reading, while the
+// output file is mostly for compiler powerlifting.
+
+typedef struct @t_name @t_name;
+struct @t_name
 {
-	T x;
-	T y;
-	T z;
-	T w;
+	@T x;
+	@T y;
+	@T z;
+	@T w;
 };
 
-@template Vec3 <- T
-typedef struct @template_name @template_name;
-struct @template_name
+@t_name new_@t_name(@T x, @T y, @T z, @T w)
 {
-	T x;
-	T y;
-	T z;
+	return (@t_name){.x = x, .y = y, .z = z, .w = w};
+}
+
+@template Vec3 <- T, func_name
+typedef struct @t_name @t_name;
+struct @t_name
+{
+	@T x;
+	@T y;
+	@T z;
 };
 
-@template_name new_@template_name(T x, T y, T z)
+@t_name @func_name(T x, T y, T z)
 {
-	return (@template_name){.x = x, .y = y, .z = z};
+	return (@t_name){.x = x, .y = y, .z = z};
 }
 
 @template Vec2 <- T
-typedef struct @template_name @template_name;
-struct @template_name
+typedef struct @t_name @t_name;
+struct @t_name
 {
 	T x;
 	T y;
 };
 
-@Vec4 -> f32 -> Vec4f
-@Vec4 -> u8 -> Vec4c
+@Vec4 <- f32: Vec4f
+@Vec4 <- u8: Vec4c
 
-@Vec3 -> f32 -> Vec3f
-@Vec3 -> u8 -> Vec3c
+@Vec3 <- f32, new_vec3f: Vec3f
+@Vec3 <- u8, new_vec3c: Vec3c
 
-@Vec2 -> f32 -> Vec2f
-@Vec2 -> u16 -> Vec2Coords
+@Vec2 <- f32: Vec2f
+@Vec2 <- u16: Vec2Coords
+

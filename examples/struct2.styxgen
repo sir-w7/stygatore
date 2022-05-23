@@ -4,7 +4,7 @@
 typedef struct @template_name
 {
     T data;
-    
+
     @template_name *next;
 } @template_name;
 @template_end
