@@ -1,7 +1,8 @@
 token_type_decl(TOKEN_UNKNOWN)
 token_type_decl(TOKEN_IDENTIFIER)
 
-token_type_decl(TOKEN_COMMENT)
+token_type_decl(TOKEN_COMMENT_LINE)
+token_type_decl(TOKEN_COMMENT_BLOCK)
 token_type_decl(TOKEN_WHITESPACE)
 
 token_type_decl(TOKEN_PARENTHETICAL_OPEN)
@@ -22,5 +23,4 @@ token_type_decl(TOKEN_TEMPLATE_NAME)
 token_type_decl(TOKEN_TEMPLATE_GEN_NAME)
 token_type_decl(TOKEN_TEMPLATE_STATEMENT_NAME)
 
-//TOKEN_END_OF_FILE,
-
+token_type_decl(TOKEN_END_OF_FILE)

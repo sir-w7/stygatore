@@ -25,131 +25,123 @@ enum token_type
 #undef token_type_decl
 };
 
-struct str8 token_type_str[] = {
+struct str8 
+str8_token_type(enum token_type type)
+{
+	static struct str8 token_type_str[] = {
 #define token_type_decl(enum_val) str8_lit(#enum_val),
-	#include "token_type.h"
+		#include "token_type.h"
 #undef token_type_decl
-};
+	};
+	
+	return token_type_str[type];
+}
 
 struct token
 {
 	enum token_type type;
 	struct str8 str;
-
-	struct token *next;
 };
 
-struct token_list
+struct tokenizer
 {
-	struct token *head, *tail;
-	struct token *at;
+	struct str8 file_data;
+	int offset;
 };
-
-void tokenlist_push(struct token_list *list,
-                    struct memory_arena *allocator, struct token token)
-{
-	if (list->head == NULL) {
-		list->head = arena_push_struct(allocator, struct token);
-		memory_copy(list->head, &token, sizeof(struct token));
-
-		list->at = list->head;
-		list->tail = list->head;
-		return;
-	}
-
-	struct token *new_node = arena_push_struct(allocator, struct token);
-	memory_copy(new_node, &token, sizeof(struct token));
-
-	list->tail->next = new_node;
-	list->tail = new_node;
-}
-
 struct str8
 str8_get_token(enum token_type type,
-	       struct str8 data, int *idx)
+	            struct tokenizer *tokenizer)
 {
 	struct str8 result = {0};
-	int offset = *idx;
-	result.str = data.str + offset;
+	int prev_offset = tokenizer->offset;
+	result.str = tokenizer->file_data.str + prev_offset;
 
 	switch (type) {
 	case TOKEN_WHITESPACE:
-		while ((*idx)++ < data.len) {
-			if (data.str[*idx] != ' ' ||
-				data.str[*idx] != '\n' ||
-				data.str[*idx] != '\r' ||
-				data.str[*idx] != '\t') break;
-		}
+		while ((tokenizer->offset++ < tokenizer->file_data.len) &&
+			(tokenizer->file_data.str[tokenizer->offset] == ' ' ||
+			tokenizer->file_data.str[tokenizer->offset] == '\n' ||
+			tokenizer->file_data.str[tokenizer->offset] == '\r' ||
+			tokenizer->file_data.str[tokenizer->offset] == '\t'));
+
 		break;
 	default:
-		while ((*idx)++ < data.len) {
-			if (data.str[*idx] == ' ' ||
-				data.str[*idx] == '\n' ||
-				data.str[*idx] == '\r' ||
-				data.str[*idx] == '\t') break;
-		}
+		while ((tokenizer->offset++ < tokenizer->file_data.len) &&
+			(tokenizer->file_data.str[tokenizer->offset] != ' ' &&
+			tokenizer->file_data.str[tokenizer->offset] != '\n' &&
+			tokenizer->file_data.str[tokenizer->offset] != '\r' &&
+			tokenizer->file_data.str[tokenizer->offset] != '\t'));
 		break;
 	}
 
-	result.len = *idx - offset;
+	result.len = tokenizer->offset - prev_offset;
 	return result;
 }
 
-void print_token(struct token *token)
+struct tokenizer
+tokenizer_file(struct memory_arena *allocator, struct str8 filename)
 {
-	println("token type: %.*s", str8_exp(token_type_str[token->type]));
+	struct tokenizer tokenizer = {0};
+	tokenizer.file_data = read_file(allocator, filename);
+	return tokenizer;
+}
+
+struct token
+get_tokenizer_at(struct tokenizer *tokenizer)
+{
+	struct token token = {0};
+
+	switch (tokenizer->file_data.str[tokenizer->offset]) {
+	case '\0':
+		token.type = TOKEN_END_OF_FILE;
+		// We don't need a string for this.
+		break;
+	case '@':
+		token.type = TOKEN_TEMPLATE_DIRECTIVE;
+		token.str = str8_get_token(token.type, tokenizer);
+		break;
+	case ' ':
+	case '\t':
+	case '\r':
+	case '\n':
+		token.type = TOKEN_WHITESPACE;
+		token.str = str8_get_token(token.type, tokenizer);
+		break;
+	default:
+		token.type = TOKEN_IDENTIFIER;
+		token.str = str8_get_token(token.type, tokenizer);
+		break;
+	};
+
+	return token;
+}
+
+static inline b32
+tokenizer_inc_all(struct tokenizer *tokenizer)
+{
+	tokenizer->offset++;
+	return tokenizer->offset < tokenizer->file_data.len;
+}
+
+void print_token(struct token token)
+{
+	println("token type: %.*s", str8_exp(str8_token_type(token.type)));
 
 	printf("token_str: ");
-	for (int i = 0; i < token->str.len; ++i) {
-		if (token->str.str[i] == ' ') {
+	for (int i = 0; i < token.str.len; ++i) {
+		if (token.str.str[i] == ' ') {
 			printf("<space>");
-		} else if (token->str.str[i] == '\t') {
+		} else if (token.str.str[i] == '\t') {
 			printf("\\t");
-		} else if (token->str.str[i] == '\r') {
+		} else if (token.str.str[i] == '\r') {
 			printf("\\r");
-		} else if (token->str.str[i] == '\n') {
+		} else if (token.str.str[i] == '\n') {
 			printf("\\n");
 		} else {
-			printf("%c", token->str.str[i]);
+			printf("%c", token.str.str[i]);
 		}
 	}
 	printnl();
-}
-
-struct token_list
-index_file(struct memory_arena *allocator, struct str8 filename)
-{
-	struct token_list tokenizer = {0};
-
-	struct str8 file_data = read_file(allocator, filename);
-	if (file_data.len == 0) return tokenizer;
-
-	for (int i = 0; i < file_data.len;) {
-		struct token token = {0};
-		char ch = file_data.str[i];
-
-		switch (ch) {
-		case '@':
-			token.type = TOKEN_TEMPLATE_DIRECTIVE;
-			token.str = str8_get_token(token.type, file_data, &i);
-			break;
-		case '\t':
-		case '\r':
-		case '\n':
-		case ' ':
-			token.type = TOKEN_WHITESPACE;
-			token.str = str8_get_token(token.type, file_data, &i);
-			break;
-		default:
-			token.type = TOKEN_IDENTIFIER;
-			token.str = str8_get_token(token.type, file_data, &i);
-			break;
-		};
-
-		tokenlist_push(&tokenizer, allocator, token);
-	}
-
-	return tokenizer;
 }
 
 void handle_file(struct memory_arena *allocator,
@@ -164,13 +156,15 @@ void handle_file(struct memory_arena *allocator,
 	println("working_dir: %.*s", str8_exp(working_dir));
 	println("base_name: %.*s", str8_exp(base_name));
 	println("ext: %.*s", str8_exp(ext));
-	printnl();
-	
-	struct token_list tokenizer = index_file(temp_allocator, file);
-	for (struct token *token = tokenizer.head; token; token = token->next) {
+
+	struct tokenizer tokenizer = tokenizer_file(allocator, file);
+	struct token token = get_tokenizer_at(&tokenizer);
+	print_token(token);
+	while (tokenizer_inc_all(&tokenizer)) {
+		token = get_tokenizer_at(&tokenizer);
 		print_token(token);
 	}
-	printnl();
+
 	printnl();
 }
 
