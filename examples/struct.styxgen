@@ -5,6 +5,8 @@
 // No, the template file is meant for reading, while the
 // output file is mostly for compiler powerlifting.
 
+/* This is a block comment to test out my
+pro skills block comment tokenizing ability. */
 typedef struct @t_name @t_name;
 struct @t_name
 {

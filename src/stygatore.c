@@ -48,33 +48,90 @@ struct tokenizer
 	struct str8 file_data;
 	int offset;
 };
+
+static inline void
+tokenizer_token_inc_whitespace(struct tokenizer *tokenizer)
+{
+	// Used to do cool pointer increment while loop thing:
+	// The classic sir->w7; but changed to other because more readable.
+	while (tokenizer->offset++ < tokenizer->file_data.len) {
+		if (tokenizer->file_data.str[tokenizer->offset] != ' ' ||
+			tokenizer->file_data.str[tokenizer->offset] != '\n' ||
+			tokenizer->file_data.str[tokenizer->offset] != '\r' ||
+			tokenizer->file_data.str[tokenizer->offset] != '\t')
+			break;
+	}
+}
+
+static inline void
+tokenizer_token_inc_comment_line(struct tokenizer *tokenizer)
+{
+	while (tokenizer->offset++ < tokenizer->file_data.len &&
+	       tokenizer->file_data.str[tokenizer->offset] != '\n');
+}
+
+static inline void
+tokenizer_token_inc_comment_block(struct tokenizer *tokenizer)
+{
+	// Increment the tokenizer past the block comment open.
+	tokenizer->offset++;
+	while ((tokenizer->offset++ < tokenizer->file_data.len)) {
+		if (tokenizer->file_data.str[tokenizer->offset] == '*' &&
+			tokenizer->file_data.str[++tokenizer->offset] == '/')
+			break;
+	}
+	// NOTE(sir->w7): The tokenizer works by calculating to the string's end
+	// to the character before the offset. Therefore, this is to maintain
+	// compatibility with the other increment functions.
+	tokenizer->offset++;
+}
+
+static inline void
+tokenizer_token_inc_default(struct tokenizer *tokenizer)
+{
+	while (tokenizer->offset++ < tokenizer->file_data.len) {
+		if (tokenizer->file_data.str[tokenizer->offset] == ' ' ||
+			tokenizer->file_data.str[tokenizer->offset] == '\n' ||
+			tokenizer->file_data.str[tokenizer->offset] == '\r' ||
+			tokenizer->file_data.str[tokenizer->offset] == '\t')
+			break;
+	}
+
+}
+
 struct str8
 str8_get_token(enum token_type type,
-	            struct tokenizer *tokenizer)
+	       struct tokenizer *tokenizer)
 {
+	if (type == TOKEN_END_OF_FILE) return (struct str8){0};
+	
 	struct str8 result = {0};
 	int prev_offset = tokenizer->offset;
 	result.str = tokenizer->file_data.str + prev_offset;
 
 	switch (type) {
 	case TOKEN_WHITESPACE:
-		while ((tokenizer->offset++ < tokenizer->file_data.len) &&
-			(tokenizer->file_data.str[tokenizer->offset] == ' ' ||
-			tokenizer->file_data.str[tokenizer->offset] == '\n' ||
-			tokenizer->file_data.str[tokenizer->offset] == '\r' ||
-			tokenizer->file_data.str[tokenizer->offset] == '\t'));
-
+		tokenizer_token_inc_whitespace(tokenizer);
+		break;
+	case TOKEN_COMMENT_LINE:
+		tokenizer_token_inc_comment_line(tokenizer);
+		break;
+	case TOKEN_COMMENT_BLOCK:
+		tokenizer_token_inc_comment_block(tokenizer);
 		break;
 	default:
-		while ((tokenizer->offset++ < tokenizer->file_data.len) &&
-			(tokenizer->file_data.str[tokenizer->offset] != ' ' &&
-			tokenizer->file_data.str[tokenizer->offset] != '\n' &&
-			tokenizer->file_data.str[tokenizer->offset] != '\r' &&
-			tokenizer->file_data.str[tokenizer->offset] != '\t'));
+		tokenizer_token_inc_default(tokenizer);
 		break;
 	}
 
 	result.len = tokenizer->offset - prev_offset;
+
+	// Rewinds the offset to prepare for a tokenizer increment
+
+	// NOTE(sir->w): Is this really necessary though? Is the tokenizer
+	// increment any more than syntactic sugar?
+	tokenizer->offset--;
+
 	return result;
 }
 
@@ -98,21 +155,26 @@ get_tokenizer_at(struct tokenizer *tokenizer)
 		break;
 	case '@':
 		token.type = TOKEN_TEMPLATE_DIRECTIVE;
-		token.str = str8_get_token(token.type, tokenizer);
 		break;
 	case ' ':
 	case '\t':
 	case '\r':
 	case '\n':
 		token.type = TOKEN_WHITESPACE;
-		token.str = str8_get_token(token.type, tokenizer);
+		break;
+	case '/':
+		if (tokenizer->file_data.str[tokenizer->offset + 1] == '/') {
+			token.type = TOKEN_COMMENT_LINE;
+		} else if (tokenizer->file_data.str[tokenizer->offset + 1] == '*') {
+			token.type = TOKEN_COMMENT_BLOCK;
+		}
 		break;
 	default:
 		token.type = TOKEN_IDENTIFIER;
-		token.str = str8_get_token(token.type, tokenizer);
 		break;
 	};
-
+	
+      	token.str = str8_get_token(token.type, tokenizer);
 	return token;
 }
 
@@ -129,9 +191,7 @@ void print_token(struct token token)
 
 	printf("token_str: ");
 	for (int i = 0; i < token.str.len; ++i) {
-		if (token.str.str[i] == ' ') {
-			printf("<space>");
-		} else if (token.str.str[i] == '\t') {
+		if (token.str.str[i] == '\t') {
 			printf("\\t");
 		} else if (token.str.str[i] == '\r') {
 			printf("\\r");
