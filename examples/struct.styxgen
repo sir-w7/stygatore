@@ -7,6 +7,7 @@
 
 /* This is a block comment to test out my
 pro skills block comment tokenizing ability. */
+
 typedef struct @t_name @t_name;
 struct @t_name
 {
@@ -15,11 +16,6 @@ struct @t_name
 	@T z;
 	@T w;
 };
-
-@t_name new_@t_name(@T x, @T y, @T z, @T w)
-{
-	return (@t_name){.x = x, .y = y, .z = z, .w = w};
-}
 
 @template Vec3 <- T, func_name
 typedef struct @t_name @t_name;

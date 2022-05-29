@@ -88,7 +88,7 @@ void *arena_push_align(struct memory_arena *arena, u64 size, u32 align)
 }
 
 //- NOTE(sir->w): Temp arena function definitions.
-struct temp_arena 
+struct temp_arena
 begin_temp_arena(struct memory_arena *arena)
 {
 	struct temp_arena temp = {

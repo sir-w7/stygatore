@@ -30,7 +30,7 @@ str8_token_type(enum token_type type)
 {
 	static struct str8 token_type_str[] = {
 #define token_type_decl(enum_val) str8_lit(#enum_val),
-		#include "token_type.h"
+		#include "token_type.h" 
 #undef token_type_decl
 	};
 	
@@ -56,9 +56,9 @@ tokenizer_token_inc_whitespace(struct tokenizer *tokenizer)
 	// The classic sir->w7; but changed to other because more readable.
 	while (tokenizer->offset++ < tokenizer->file_data.len) {
 		if (tokenizer->file_data.str[tokenizer->offset] != ' ' ||
-			tokenizer->file_data.str[tokenizer->offset] != '\n' ||
-			tokenizer->file_data.str[tokenizer->offset] != '\r' ||
-			tokenizer->file_data.str[tokenizer->offset] != '\t')
+		    tokenizer->file_data.str[tokenizer->offset] != '\n' ||
+		    tokenizer->file_data.str[tokenizer->offset] != '\r' ||
+		    tokenizer->file_data.str[tokenizer->offset] != '\t')
 			break;
 	}
 }
@@ -77,7 +77,7 @@ tokenizer_token_inc_comment_block(struct tokenizer *tokenizer)
 	tokenizer->offset++;
 	while ((tokenizer->offset++ < tokenizer->file_data.len)) {
 		if (tokenizer->file_data.str[tokenizer->offset] == '*' &&
-			tokenizer->file_data.str[++tokenizer->offset] == '/')
+		    tokenizer->file_data.str[++tokenizer->offset] == '/')
 			break;
 	}
 	// NOTE(sir->w7): The tokenizer works by calculating to the string's end
@@ -91,9 +91,9 @@ tokenizer_token_inc_default(struct tokenizer *tokenizer)
 {
 	while (tokenizer->offset++ < tokenizer->file_data.len) {
 		if (tokenizer->file_data.str[tokenizer->offset] == ' ' ||
-			tokenizer->file_data.str[tokenizer->offset] == '\n' ||
-			tokenizer->file_data.str[tokenizer->offset] == '\r' ||
-			tokenizer->file_data.str[tokenizer->offset] == '\t')
+		    tokenizer->file_data.str[tokenizer->offset] == '\n' ||
+		    tokenizer->file_data.str[tokenizer->offset] == '\r' ||
+		    tokenizer->file_data.str[tokenizer->offset] == '\t')
 			break;
 	}
 
@@ -174,15 +174,16 @@ get_tokenizer_at(struct tokenizer *tokenizer)
 		break;
 	};
 	
-      	token.str = str8_get_token(token.type, tokenizer);
+	token.str = str8_get_token(token.type, tokenizer);
 	return token;
 }
 
-static inline b32
+static inline struct token
 tokenizer_inc_all(struct tokenizer *tokenizer)
 {
 	tokenizer->offset++;
-	return tokenizer->offset < tokenizer->file_data.len;
+	return tokenizer->offset < tokenizer->file_data.len ?
+		get_tokenizer_at(tokenizer) : (struct token){0};
 }
 
 void print_token(struct token token)
@@ -218,10 +219,9 @@ void handle_file(struct memory_arena *allocator,
 	println("ext: %.*s", str8_exp(ext));
 
 	struct tokenizer tokenizer = tokenizer_file(allocator, file);
-	struct token token = get_tokenizer_at(&tokenizer);
-	print_token(token);
-	while (tokenizer_inc_all(&tokenizer)) {
-		token = get_tokenizer_at(&tokenizer);
+	for (struct token token = get_tokenizer_at(&tokenizer);
+	     !str8_is_nil(token.str);
+	     token = tokenizer_inc_all(&tokenizer)) {
 		print_token(token);
 	}
 
@@ -243,7 +243,7 @@ int main(int argc, char **argv)
 {
 	if (argc == 1) {
 		println("stygatore is a sane, performant metaprogramming tool for language-agnostic generics\n"
-			"with readable diagnostics and viewable output free from compiler/vendor control\n" 
+			"with readable diagnostics and viewable output free from compiler/vendor control\n"
 			"for maximum developer productivity.");
 		printnl();
 		println("Usage: %s [files/directories]", argv[0]);
