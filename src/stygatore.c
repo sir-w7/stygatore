@@ -18,6 +18,8 @@
 //--------------------------------------------------------------------
 //-----------------------------Stygatore------------------------------
 //--------------------------------------------------------------------
+
+// Tokenization
 enum token_type
 {
 #define token_type_decl(enum_val) enum_val,
@@ -25,7 +27,7 @@ enum token_type
 #undef token_type_decl
 };
 
-struct str8 
+struct str8
 str8_token_type(enum token_type type)
 {
 	static struct str8 token_type_str[] = {
@@ -48,20 +50,6 @@ struct tokenizer
 	struct str8 file_data;
 	int offset;
 };
-
-static inline void
-tokenizer_token_inc_whitespace(struct tokenizer *tokenizer)
-{
-	// Used to do cool pointer increment while loop thing:
-	// The classic sir->w7; but changed to other because more readable.
-	while (tokenizer->offset++ < tokenizer->file_data.len) {
-		if (tokenizer->file_data.str[tokenizer->offset] != ' ' ||
-		    tokenizer->file_data.str[tokenizer->offset] != '\n' ||
-		    tokenizer->file_data.str[tokenizer->offset] != '\r' ||
-		    tokenizer->file_data.str[tokenizer->offset] != '\t')
-			break;
-	}
-}
 
 static inline void
 tokenizer_token_inc_comment_line(struct tokenizer *tokenizer)
@@ -87,16 +75,40 @@ tokenizer_token_inc_comment_block(struct tokenizer *tokenizer)
 }
 
 static inline void
+tokenizer_token_inc_whitespace(struct tokenizer *tokenizer)
+{
+	static char whitespaces[] = {
+		' ', '\n', '\r', '\t',
+	};
+	// Used to do cool pointer increment while loop thing:
+	// The classic sir->w7; but changed to other because more readable.
+	while (tokenizer->offset++ < tokenizer->file_data.len) {
+		for (int i = 0; i < array_count(whitespaces); ++i) {
+			char whitespace = whitespaces[i];
+			if (tokenizer->file_data.str[tokenizer->offset] !=
+			    whitespace)
+				return;
+		}
+	}
+}
+
+static inline void
 tokenizer_token_inc_default(struct tokenizer *tokenizer)
 {
-	while (tokenizer->offset++ < tokenizer->file_data.len) {
-		if (tokenizer->file_data.str[tokenizer->offset] == ' ' ||
-		    tokenizer->file_data.str[tokenizer->offset] == '\n' ||
-		    tokenizer->file_data.str[tokenizer->offset] == '\r' ||
-		    tokenizer->file_data.str[tokenizer->offset] == '\t')
-			break;
-	}
+	// Delimiter is likely not even the right term for this.
+	static char delimiters[] = {
+		' ', '\n', '\r', '\t',
+		'(', ')', '{', '}',
+	};
 
+	while (tokenizer->offset++ < tokenizer->file_data.len) {
+		for (int i = 0; i < array_count(delimiters); ++i) {
+			char delimiter = delimiters[i];
+			if (tokenizer->file_data.str[tokenizer->offset] ==
+			    delimiter)
+				return;
+		}
+	}
 }
 
 struct str8
@@ -143,10 +155,13 @@ tokenizer_file(struct memory_arena *allocator, struct str8 filename)
 	return tokenizer;
 }
 
+// TODO(sir->w7): When tokenizer->offset goes beyond the total length of
+// the file, then we should have get_tokenizer_at return a null token.
 struct token
 get_tokenizer_at(struct tokenizer *tokenizer)
 {
 	struct token token = {0};
+	//if (tokenizer->offset >= tokenizer->file_data.len) return token;
 
 	switch (tokenizer->file_data.str[tokenizer->offset]) {
 	case '\0':
@@ -169,6 +184,18 @@ get_tokenizer_at(struct tokenizer *tokenizer)
 			token.type = TOKEN_COMMENT_BLOCK;
 		}
 		break;
+	case '{':
+		token.type = TOKEN_BRACE_OPEN;
+		break;
+	case '}':
+		token.type = TOKEN_BRACE_CLOSE;
+		break;
+	case '(':
+		token.type = TOKEN_PARENTHETICAL_OPEN;
+		break;
+	case ')':
+		token.type = TOKEN_PARENTHETICAL_CLOSE;
+		break;
 	default:
 		token.type = TOKEN_IDENTIFIER;
 		break;
@@ -182,10 +209,25 @@ static inline struct token
 tokenizer_inc_all(struct tokenizer *tokenizer)
 {
 	tokenizer->offset++;
-	return tokenizer->offset < tokenizer->file_data.len ?
-		get_tokenizer_at(tokenizer) : (struct token){0};
+	return get_tokenizer_at(tokenizer);
 }
 
+static struct token
+tokenizer_inc_no_whitespace(struct tokenizer *tokenizer)
+{
+	struct token token = tokenizer_inc_all(tokenizer);
+	while (token.type != TOKEN_END_OF_FILE) {
+		if (token.type != TOKEN_WHITESPACE &&
+		    token.type != TOKEN_COMMENT_LINE &&
+		    token.type != TOKEN_COMMENT_BLOCK) {
+			break;
+		}
+		token = tokenizer_inc_all(tokenizer);
+	}
+	return token;
+}
+
+static
 void print_token(struct token token)
 {
 	println("token type: %.*s", str8_exp(str8_token_type(token.type)));
@@ -220,8 +262,8 @@ void handle_file(struct memory_arena *allocator,
 
 	struct tokenizer tokenizer = tokenizer_file(allocator, file);
 	for (struct token token = get_tokenizer_at(&tokenizer);
-	     !str8_is_nil(token.str);
-	     token = tokenizer_inc_all(&tokenizer)) {
+	     token.type != TOKEN_END_OF_FILE;
+	     token = tokenizer_inc_no_whitespace(&tokenizer)) {
 		print_token(token);
 	}
 
@@ -258,7 +300,7 @@ int main(int argc, char **argv)
 		if (is_file(arg->data)) {
 			handle_file(&allocator, &temp_allocator, arg->data);
 		} else if (is_dir(arg->data)) {
-			handle_dir(&allocator, &temp_allocator, arg->data);	
+			handle_dir(&allocator, &temp_allocator, arg->data);
 		} else {
 			fprintln(stderr, "Argument is neither a file nor a directory.");
 		}

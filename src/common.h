@@ -28,6 +28,8 @@ typedef u64 b64;
 
 #define cast(variable_identifier, type) ((type)variable_identifier)
 
+#define array_count(arr) (sizeof(arr) / sizeof(arr[0]))
+
 #define _println(fmt, ...) printf(fmt "\n", ##__VA_ARGS__)
 #define println(fmt, ...) _println(fmt, ##__VA_ARGS__)
 

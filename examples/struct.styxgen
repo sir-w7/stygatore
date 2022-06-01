@@ -35,8 +35,8 @@ struct @t_name
 typedef struct @t_name @t_name;
 struct @t_name
 {
-	T x;
-	T y;
+	@T x;
+	@T y;
 };
 
 @Vec4 <- f32: Vec4f
