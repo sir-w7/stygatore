@@ -1,0 +1,50 @@
+@output vector.h
+
+@template Vec4 <- T
+// Do we want to output comments like this into the output file?
+// No, the template file is meant for reading, while the
+// output file is mostly for compiler powerlifting.
+
+/* This is a block comment to test out my
+pro skills block comment tokenizing ability. */
+
+typedef struct @t_name @t_name;
+struct @t_name
+{
+	@T x;
+	@T y;
+	@T z;
+	@T w;
+};
+
+@template Vec3 <- T, func_name
+typedef struct @t_name @t_name;
+struct @t_name
+{
+	@T x;
+	@T y;
+	@T z;
+};
+
+@t_name @func_name(T x, T y, T z)
+{
+	return (@t_name){.x = x, .y = y, .z = z};
+}
+
+@template Vec2 <- T
+typedef struct @t_name @t_name;
+struct @t_name
+{
+	@T x;
+	@T y;
+};
+
+@Vec4 <- f32: Vec4f
+@Vec4 <- u8: Vec4c
+
+@Vec3 <- f32, new_vec3f: Vec3f
+@Vec3 <- u8, new_vec3c: Vec3c
+
+@Vec2 <- f32: Vec2f
+@Vec2 <- u16: Vec2Coords
+
