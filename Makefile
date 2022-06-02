@@ -1,23 +1,30 @@
-##
-# Stygatore
-#
-# @file
-# @version 0.1
+# Time to write a Makefile because I forgot how to write one.
+# https://makefiletutorial.com/
 
-C = clang
-SRC_FILES = code/stygatore.c
-OUTPUT_EXE = build/stygatore
+CC = clang
+CFLAGS = -g -MMD -MP
 
-all: build build/stygatore
+TARGET_EXE = stygatore
 
-build/stygatore: code/stygatore.c code/linux/linux_platform.c code/linux/linux_platform.h
-	$(C) -g $(SRC_FILES) -o $(OUTPUT_EXE)
+BUILD_DIR = build
+SRC_DIR = src
 
-build:
-	mkdir build
+SRCS = $(wildcard src/*.c src/linux/*.c)
+OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:$(SRC_DIR)/%.c=%.o))
+DEPS = $(OBJS:.o=.d)
+
+$(BUILD_DIR)/$(TARGET_EXE): $(OBJS)
+	@$(CC) -g $(OBJS) -o $@ $(LDFLAGS)
+	@echo "  LINK	$^ -> $@"
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -c $< -o $@
+	@echo "  CC	$< -> $@"
 
 .PHONY: clean
-clean:
-	rm -rf build/*
 
-# end
+clean:
+	rm -rf $(BUILD_DIR)/*
+
+-include $(DEPS)
