@@ -1,5 +1,6 @@
 token_type_decl(TOKEN_UNKNOWN)
 token_type_decl(TOKEN_IDENTIFIER)
+token_type_decl(TOKEN_SEMICOLON)
 
 token_type_decl(TOKEN_COMMENT_LINE)
 token_type_decl(TOKEN_COMMENT_BLOCK)
@@ -14,6 +15,8 @@ token_type_decl(TOKEN_FEED_RIGHT)
 token_type_decl(TOKEN_FEED_LEFT)
 
 token_type_decl(TOKEN_TEMPLATE_DIRECTIVE)
+token_type_decl(TOKEN_TEMPLATE_DIRECTIVE_OUTPUT)
+
 token_type_decl(TOKEN_TEMPLATE_TYPE_IDENTIFIER)
 token_type_decl(TOKEN_TEMPLATE_TYPE)
 token_type_decl(TOKEN_TEMPLATE_VARIABLE)

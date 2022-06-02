@@ -1,6 +1,10 @@
 #ifndef __LAYER_H_
 #define __LAYER_H_
 
+#include <stdio.h>
+#include <stdint.h>
+#include <assert.h>
+
 typedef int8_t  i8;
 typedef int16_t i16;
 typedef int32_t i32;
