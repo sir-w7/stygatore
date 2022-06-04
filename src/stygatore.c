@@ -16,7 +16,6 @@
 //-----------------------------Stygatore------------------------------
 //--------------------------------------------------------------------
 
-// Tokenization
 void handle_file(struct memory_arena *allocator,
 		 struct memory_arena *temp_allocator,
 		 struct str8 file)
