@@ -54,6 +54,9 @@ typedef u64 b64;
 #define min(a, b) (a > b ? b : a)
 #endif 
 
+#define defer_block(start, end) \
+for (int _i_##__LINE__ = ((start), 0);  _i_##__LINE__ == 0; _i_##__LINE__ += 1, (end))
+
 //-------------------------------Memory-------------------------------
 #define DEF_ALIGN (2 * sizeof(void *))
 
@@ -61,7 +64,7 @@ struct memory_arena
 {
 	u8 *mem;
 	u64 size;
-
+    
 	u64 prev_offset;
 	u64 curr_offset;
 };

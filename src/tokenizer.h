@@ -3,10 +3,25 @@
 
 enum token_type
 {
-#define token_type_decl(enum_val) enum_val,
-#include "token_type.h"
-#undef token_type_decl
-    TOKEN_MAX,
+    Token_Unknown,
+    Token_Identifier,
+    Token_Semicolon,
+    
+    Token_CommentLine,
+    Token_CommentBlock,
+    Token_Whitespace,
+    
+    Token_ParentheticalOpen,
+    Token_ParentheticalClose,
+    Token_BraceOpen,
+    Token_BraceClose,
+    
+    Token_FeedRight,
+    Token_FeedLeft,
+    
+    Token_TemplateDirective,
+    
+    Token_EndOfFile,
 };
 
 struct token
@@ -23,7 +38,7 @@ struct tokenizer
 
 struct str8 str8_get_token(enum token_type type, struct tokenizer *tokens);
 struct tokenizer tokenizer_file(struct memory_arena *allocator, struct str8 filename);
-struct token get_tokenizer_at(struct tokenizer *tokens);
+struct token tokenizer_get_at(struct tokenizer *tokens);
 void print_token(struct token token);
 
 struct token tokenizer_inc_all(struct tokenizer *tokens);

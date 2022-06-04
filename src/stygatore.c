@@ -12,10 +12,6 @@
 
 #define STYX_EXT "styxgen"
 
-//--------------------------------------------------------------------
-//-----------------------------Stygatore------------------------------
-//--------------------------------------------------------------------
-
 void handle_file(struct memory_arena *allocator,
                  struct memory_arena *temp_allocator,
                  struct str8 file)
@@ -29,14 +25,12 @@ void handle_file(struct memory_arena *allocator,
 	println("base_name: %.*s", str8_exp(base_name));
 	println("ext: %.*s", str8_exp(ext));
     
-#if 0
-	struct tokenizer tokenizer = tokenizer_file(allocator, file);
-	for (struct token token = get_tokenizer_at(&tokenizer);
-	     token.type != TOKEN_END_OF_FILE;
-	     token = tokenizer_inc_no_whitespace(&tokenizer)) {
-		print_token(token);
+	struct tokenizer tokens = tokenizer_file(allocator, file);
+	for (struct token tok = tokenizer_get_at(&tokens);
+	     tok.type != Token_EndOfFile;
+	     tok = tokenizer_inc_no_whitespace(&tokens)) {
+		print_token(tok);
 	}
-#endif
     
 	printnl();
 }
@@ -45,8 +39,7 @@ void handle_dir(struct memory_arena *allocator,
                 struct memory_arena *temp_allocator,
                 struct str8 dir)
 {
-	struct str8list files = 
-		get_dir_list_ext(allocator, dir, str8_lit(STYX_EXT));
+	struct str8list files = get_dir_list_ext(allocator, dir, str8_lit(STYX_EXT));
 	//struct str8list files = get_dir_list_ext(allocator, dir, str8_lit("c"));
 	for (struct str8node *file = files.head; file; file = file->next) {
 		handle_file(allocator, temp_allocator, file->data);
@@ -56,9 +49,7 @@ void handle_dir(struct memory_arena *allocator,
 int main(int argc, char **argv)
 {
 	if (argc == 1) {
-		println("stygatore is a sane, performant metaprogramming tool for language-agnostic generics\n"
-                "with readable diagnostics and viewable output free from compiler/vendor control\n"
-                "for maximum developer productivity.");
+		println("stygatore is a sane, performant metaprogramming tool for\n" "language-agnostic generics with readable diagnostics for maximum\n" "developer productivity.");
 		printnl();
 		println("Usage: %s [files/directories]", argv[0]);
 	}

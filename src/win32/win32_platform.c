@@ -89,12 +89,12 @@ get_dir_list_ext(struct memory_arena *allocator,
 		if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
 			str8_compare(file_ext(filename), ext)) {
 			// TODO(sir->w7): For loop-based defer macro to simplify this interface.
-			struct temp_arena scratch = begin_temp_arena(allocator); 
-			
-			struct str8 file_rel = push_str8_concat(allocator, dir_path, str8_lit("/"));
-			file_rel = push_str8_concat(allocator, file_rel, filename);
-            
-			end_temp_arena(&scratch);
+			struct temp_arena scratch = {0};
+            struct str8 file_rel = {0};
+            defer_block(scratch = begin_temp_arena(allocator), end_temp_arena(&scratch)) {
+                file_rel = push_str8_concat(allocator, dir_path, str8_lit("/"));
+                file_rel = push_str8_concat(allocator, file_rel, filename);
+            }
             
 			struct str8 file_path = get_file_abspath(allocator, file_rel);
 			str8list_push(&dir_file_list, allocator, file_path);

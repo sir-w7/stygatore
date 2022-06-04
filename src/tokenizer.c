@@ -6,9 +6,25 @@ str8_token_type(enum token_type type)
 {
     // NOTE(sir->w7): Initializer is not a constant bullcrap, but this is really only a debug function, so it does not matter.
     struct str8 token_type_str[] = {
-#define token_type_decl(enum_val) str8_lit(#enum_val),
-# include "token_type.h"
-#undef token_type_decl
+        str8_lit("Token_Unknown"),
+        str8_lit("Token_Identifier"),
+        str8_lit("Token_Semicolon"),
+        
+        str8_lit("Token_CommentLine"),
+        str8_lit("Token_CommentBlock"),
+        str8_lit("Token_Whitespace"),
+        
+        str8_lit("Token_ParentheticalOpen"),
+        str8_lit("Token_ParentheticalClose"),
+        str8_lit("Token_BraceOpen"),
+        str8_lit("Token_BraceClose"),
+        
+        str8_lit("Token_FeedRight"),
+        str8_lit("Token_FeedLeft"),
+        
+        str8_lit("Token_TemplateDirective"),
+        
+        str8_lit("Token_EndOfFile"),
     };
     
 	return token_type_str[type];
@@ -77,26 +93,26 @@ struct str8
 str8_get_token(enum token_type type,
                struct tokenizer *tokens)
 {
-	if (type == TOKEN_END_OF_FILE) return (struct str8){0};
+	if (type == Token_EndOfFile) return (struct str8){0};
     
 	struct str8 result = {0};
 	int prev_offset = tokens->offset;
 	result.str = tokens->file_data.str + prev_offset;
     
 	switch (type) {
-        case TOKEN_WHITESPACE: {
+        case Token_Whitespace: {
             tokenizer_token_inc_whitespace(tokens);
 		} break;
-        case TOKEN_COMMENT_LINE: {
+        case Token_CommentLine: {
             tokenizer_token_inc_comment_line(tokens);
 		} break;
-        case TOKEN_COMMENT_BLOCK: {
+        case Token_CommentBlock: {
             tokenizer_token_inc_comment_block(tokens);
 		} break;
-        case TOKEN_BRACE_OPEN:
-        case TOKEN_BRACE_CLOSE:
-        case TOKEN_PARENTHETICAL_OPEN:
-        case TOKEN_PARENTHETICAL_CLOSE: {
+        case Token_BraceOpen:
+        case Token_BraceClose:
+        case Token_ParentheticalOpen:
+        case Token_ParentheticalClose: {
             // We basically only want to grab the one character.
             tokens->offset++;
 		} break;
@@ -124,74 +140,72 @@ tokenizer_file(struct memory_arena *allocator, struct str8 filename)
 	return tokens;
 }
 
-static enum token_type
-lex_token_str(struct token tok)
+static inline char
+tokenizer_peek_next(struct tokenizer *tokens)
 {
-	enum token_type type = TOKEN_UNKNOWN;
-	if (tok.type == TOKEN_TEMPLATE_DIRECTIVE) {
-		if (str8_compare(tok.str, str8_lit("@output"))) {
-			type = TOKEN_TEMPLATE_DIRECTIVE_OUTPUT;
-		} else {
-			type = TOKEN_TEMPLATE_DIRECTIVE;
-		}
-	} else {
-		type = tok.type;
-	}
-    
-	return type;
+    return tokens->file_data.str[tokens->offset + 1];
 }
 
 // TODO(sir->w7): When tokenizer->offset goes beyond the total length of
-// the file, then we should have get_tokenizer_at return a null token.
+// the file, then we should have tokenizer_get_at return a null token.
 struct token
-get_tokenizer_at(struct tokenizer *tokens)
+tokenizer_get_at(struct tokenizer *tokens)
 {
 	struct token tok = {0};
 	//if (tokenizer->offset >= tokenizer->file_data.len) return token;
     
 	switch (tokens->file_data.str[tokens->offset]) {
         case '\0': {
-            tok.type = TOKEN_END_OF_FILE;
-            // We don't need a string for this.
+            tok.type = Token_EndOfFile;
+            // NOTE(sir->w7): We don't need a string for this, but wouldn't that complicate the developer style?
 		} break;
         case '@': {
-            tok.type = TOKEN_TEMPLATE_DIRECTIVE;
+            tok.type = Token_TemplateDirective;
 		} break;
         case ' ':
         case '\t':
         case '\r':
         case '\n': {
-            tok.type = TOKEN_WHITESPACE;
+            tok.type = Token_Whitespace;
 		} break;
         case '/': {
-            if (tokens->file_data.str[tokens->offset + 1] == '/') {
-                tok.type = TOKEN_COMMENT_LINE;
-            } else if (tokens->file_data.str[tokens->offset + 1] == '*') {
-                tok.type = TOKEN_COMMENT_BLOCK;
+            if (tokenizer_peek_next(tokens) == '/') {
+                tok.type = Token_CommentLine;
+            } else if (tokenizer_peek_next(tokens) == '*') {
+                tok.type = Token_CommentBlock;
             }
 		} break;
         case '{': {
-            tok.type = TOKEN_BRACE_OPEN;
+            tok.type = Token_BraceOpen;
 		} break;
         case '}': {
-            tok.type = TOKEN_BRACE_CLOSE;
+            tok.type = Token_BraceClose;
 		} break;
         case '(': {
-            tok.type = TOKEN_PARENTHETICAL_OPEN;
+            tok.type = Token_ParentheticalOpen;
 		} break;
         case ')': {
-            tok.type = TOKEN_PARENTHETICAL_CLOSE;
+            tok.type = Token_ParentheticalClose;
 		} break;
         case ';': {
-            tok.type = TOKEN_SEMICOLON;
+            tok.type = Token_Semicolon;
 		} break;
+        case '<': {
+            if (tokenizer_peek_next(tokens) == '-') {
+                tok.type = Token_FeedLeft;
+            }
+        } break;
+        case '-': {
+            if (tokenizer_peek_next(tokens) == '>') { 
+                tok.type = Token_FeedRight;
+            }
+        } break;
         default: {
-            tok.type = TOKEN_IDENTIFIER;
+            tok.type = Token_Identifier;
 		} break;
 	};
     
 	tok.str = str8_get_token(tok.type, tokens);
-	tok.type = lex_token_str(tok);
     
 	return tok;
 }
@@ -200,18 +214,18 @@ struct token
 tokenizer_inc_all(struct tokenizer *tokens)
 {
 	tokens->offset++;
-	return get_tokenizer_at(tokens);
+	return tokenizer_get_at(tokens);
 }
 
 struct token
 tokenizer_inc_no_whitespace(struct tokenizer *tokens)
 {
 	struct token tok = tokenizer_inc_all(tokens);
-	while (tok.type != TOKEN_END_OF_FILE) {
-		if (tok.type != TOKEN_WHITESPACE &&
-		    tok.type != TOKEN_COMMENT_LINE &&
-		    tok.type != TOKEN_COMMENT_BLOCK &&
-		    tok.type != TOKEN_SEMICOLON) {
+	while (tok.type != Token_EndOfFile) {
+		if (tok.type != Token_Whitespace &&
+		    tok.type != Token_CommentLine &&
+		    tok.type != Token_CommentBlock &&
+		    tok.type != Token_Semicolon) {
 			break;
 		}
 		tok = tokenizer_inc_all(tokens);
@@ -237,5 +251,3 @@ void print_token(struct token tok)
 	}
 	printnl();
 }
-
-
