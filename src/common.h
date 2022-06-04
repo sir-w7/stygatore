@@ -46,8 +46,13 @@ typedef u64 b64;
 //--------------------------Basic Utilities---------------------------
 //--------------------------------------------------------------------
 
+#ifndef max
 #define max(a, b) (a > b ? a : b)
+#endif
+
+#ifndef min
 #define min(a, b) (a > b ? b : a)
+#endif 
 
 //-------------------------------Memory-------------------------------
 #define DEF_ALIGN (2 * sizeof(void *))

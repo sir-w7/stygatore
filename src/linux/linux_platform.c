@@ -15,11 +15,11 @@
 #include "../common.h"
 #include "../platform.h"
 
-f32 get_time()
+f64 get_time()
 {
 	struct timespec time_spec_thing = {0};
 	clock_gettime(CLOCK_REALTIME, &time_spec_thing);
-	float seconds_elapsed = ((float)time_spec_thing.tv_nsec / (float)1e9);
+	float seconds_elapsed = ((f64)time_spec_thing.tv_nsec / (f64)1e9);
 	return seconds_elapsed;
 }
 
@@ -57,16 +57,16 @@ get_file_abspath(struct memory_arena *allocator, struct str8 file_path)
 
 struct str8list 
 get_dir_list_ext(struct memory_arena *allocator, 
-		 struct str8 dir_path, struct str8 ext)
+                 struct str8 dir_path, struct str8 ext)
 {
 	struct str8list dir_file_list = {0};
-
+    
 	DIR *dir = opendir(dir_path.str);	
 	if (dir == NULL) {
 		fprintln(stderr, "Not a directory. opendir failed.");
 		return dir_file_list;
 	}
-
+    
 	struct dirent *dir_entry = NULL;
 	while ((dir_entry = readdir(dir)) != NULL) {
 		struct str8 filename = str8_from_cstr(dir_entry->d_name);
@@ -77,14 +77,14 @@ get_dir_list_ext(struct memory_arena *allocator,
 			
 			struct str8 file_rel = push_str8_concat(allocator, dir_path, str8_lit("/"));
 			file_rel = push_str8_concat(allocator, file_rel, filename);
-
+            
 			end_temp_arena(&scratch);
-
+            
 			struct str8 file_path = get_file_abspath(allocator, file_rel);
 			str8list_push(&dir_file_list, allocator, file_path);
 		}
 	}
 	closedir(dir);
-
+    
 	return dir_file_list;
 }

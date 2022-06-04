@@ -1,4 +1,6 @@
 *.o
 *.out
+*.4coder
+
 build/
 .*

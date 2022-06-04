@@ -4,8 +4,9 @@
 enum token_type
 {
 #define token_type_decl(enum_val) enum_val,
-	#include "token_type.h"
+#include "token_type.h"
 #undef token_type_decl
+    TOKEN_MAX,
 };
 
 struct token
@@ -20,12 +21,12 @@ struct tokenizer
 	int offset;
 };
 
-struct str8 str8_get_token(enum token_type type, struct tokenizer *tokenizer);
+struct str8 str8_get_token(enum token_type type, struct tokenizer *tokens);
 struct tokenizer tokenizer_file(struct memory_arena *allocator, struct str8 filename);
-struct token get_tokenizer_at(struct tokenizer *tokenizer);
+struct token get_tokenizer_at(struct tokenizer *tokens);
 void print_token(struct token token);
 
-struct token tokenizer_inc_all(struct tokenizer *tokenizer);
-struct token tokenizer_inc_no_whitespace(struct tokenizer *tokenizer);
+struct token tokenizer_inc_all(struct tokenizer *tokens);
+struct token tokenizer_inc_no_whitespace(struct tokenizer *tokens);
 
 #endif
