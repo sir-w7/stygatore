@@ -222,10 +222,8 @@ tokenizer_inc_no_whitespace(struct tokenizer *tokens)
 {
 	struct token tok = tokenizer_inc_all(tokens);
 	while (tok.type != Token_EndOfFile) {
-		if (tok.type != Token_Whitespace &&
-		    tok.type != Token_CommentLine &&
-		    tok.type != Token_CommentBlock &&
-		    tok.type != Token_Semicolon) {
+		if (tok.type != Token_Whitespace && tok.type != Token_Semicolon &&
+		    tok.type != Token_CommentLine && tok.type != Token_CommentBlock) {
 			break;
 		}
 		tok = tokenizer_inc_all(tokens);

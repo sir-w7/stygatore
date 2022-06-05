@@ -40,6 +40,7 @@ void handle_dir(struct memory_arena *allocator,
                 struct str8 dir)
 {
 	struct str8list files = get_dir_list_ext(allocator, dir, str8_lit(STYX_EXT));
+	
 	//struct str8list files = get_dir_list_ext(allocator, dir, str8_lit("c"));
 	for (struct str8node *file = files.head; file; file = file->next) {
 		handle_file(allocator, temp_allocator, file->data);
@@ -49,7 +50,9 @@ void handle_dir(struct memory_arena *allocator,
 int main(int argc, char **argv)
 {
 	if (argc == 1) {
-		println("stygatore is a sane, performant metaprogramming tool for\n" "language-agnostic generics with readable diagnostics for maximum\n" "developer productivity.");
+		println("stygatore is a sane, performant metaprogramming tool for\n"
+				"language-agnostic generics with readable diagnostics for maximum\n"
+				"developer productivity.");
 		printnl();
 		println("Usage: %s [files/directories]", argv[0]);
 	}
