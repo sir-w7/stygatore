@@ -4,7 +4,7 @@
 static inline struct str8
 str8_token_type(enum token_type type)
 {
-	// NOTE(sir->w7): Initializer is not a constant bullcrap, but this is really only a debug function, so it does not matter.
+	// NOTE (sir->w7): Initializer is not a constant bullcrap, but this is really only a debug function, so it does not matter.
 	struct str8 token_type_str[] = {
 		str8_lit("Token_Unknown"),
 		str8_lit("Token_Identifier"),
@@ -108,6 +108,7 @@ str8_get_token(enum token_type type,
 	case Token_BraceClose:
 	case Token_ParentheticalOpen:
 	case Token_ParentheticalClose: { tokens->offset++; } break;
+
 	default: { tokenizer_token_inc_def(tokens); } break;
 	}
 
@@ -143,7 +144,7 @@ tokenizer_get_at(struct tokenizer *tokens)
 {
 	struct token tok = {0};
 	//if (tokenizer->offset >= tokenizer->file_data.len) return token;
-    
+
 	switch (tokens->file_data.str[tokens->offset]) {
         case '\0': { tok.type = Token_EndOfFile; } break;
         case '@': { tok.type = Token_TemplateDirective; } break;
@@ -180,9 +181,9 @@ tokenizer_get_at(struct tokenizer *tokens)
 
         default: { tok.type = Token_Identifier; } break;
 	};
-    
+
 	tok.str = str8_get_token(tok.type, tokens);
-    
+
 	return tok;
 }
 

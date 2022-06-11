@@ -17,7 +17,7 @@ uintptr_t align_forth(uintptr_t ptr, u32 align)
 	uintptr_t p = ptr;
 	uintptr_t a = (uintptr_t)align;
 
-    	// NOTE(sir->w): Basically p % a. No clue how this works.
+	// NOTE(sir->w): Basically p % a. No clue how this works.
 	uintptr_t modulo = p & (a - 1);
 	if (modulo != 0) {
 		p += a - modulo;
@@ -283,7 +283,7 @@ arg_list(struct memory_arena *allocator,
 }
 
 // djb2 hash function for string hashing.
-u64 get_hash(struct str8 str)
+u64 djb2_hash(struct str8 str)
 {
 	u64 hash = 5381;
 	i32 c = 0;

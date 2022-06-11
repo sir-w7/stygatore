@@ -22,9 +22,12 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo "  CC	$< -> $@"
 
-.PHONY: clean
+.PHONY: clean test
 
 clean:
 	rm -rf $(BUILD_DIR)/*
+
+test:
+	./$(BUILD_DIR)/$(TARGET_EXE) ./examples/
 
 -include $(DEPS)

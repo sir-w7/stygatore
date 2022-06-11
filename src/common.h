@@ -140,6 +140,6 @@ struct str8 read_file(struct memory_arena *allocator, struct str8 filename);
 struct str8list arg_list(struct memory_arena *allocator, int argc, char **argv);
 
 // djb2 hash function for string hashing.
-u64 get_hash(struct str8 str);
+u64 djb2_hash(struct str8 str);
 
 #endif
