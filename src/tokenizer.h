@@ -3,25 +3,25 @@
 
 enum token_type
 {
-    Token_Unknown,
-    Token_Identifier,
-    Token_Semicolon,
-    
-    Token_CommentLine,
-    Token_CommentBlock,
-    Token_Whitespace,
-    
-    Token_ParentheticalOpen,
-    Token_ParentheticalClose,
-    Token_BraceOpen,
-    Token_BraceClose,
-    
-    Token_FeedRight,
-    Token_FeedLeft,
-    
-    Token_TemplateDirective,
-    
-    Token_EndOfFile,
+	Token_Unknown,
+	Token_Identifier,
+	Token_Semicolon,
+
+	Token_CommentLine,
+	Token_CommentBlock,
+	Token_Whitespace,
+
+	Token_ParentheticalOpen,
+	Token_ParentheticalClose,
+	Token_BraceOpen,
+	Token_BraceClose,
+
+	Token_FeedRight,
+	Token_FeedLeft,
+
+	Token_TemplateDirective,
+
+	Token_EndOfFile,
 };
 
 struct token

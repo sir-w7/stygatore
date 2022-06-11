@@ -4,29 +4,29 @@
 static inline struct str8
 str8_token_type(enum token_type type)
 {
-    // NOTE(sir->w7): Initializer is not a constant bullcrap, but this is really only a debug function, so it does not matter.
-    struct str8 token_type_str[] = {
-        str8_lit("Token_Unknown"),
-        str8_lit("Token_Identifier"),
-        str8_lit("Token_Semicolon"),
-        
-        str8_lit("Token_CommentLine"),
-        str8_lit("Token_CommentBlock"),
-        str8_lit("Token_Whitespace"),
-        
-        str8_lit("Token_ParentheticalOpen"),
-        str8_lit("Token_ParentheticalClose"),
-        str8_lit("Token_BraceOpen"),
-        str8_lit("Token_BraceClose"),
-        
-        str8_lit("Token_FeedRight"),
-        str8_lit("Token_FeedLeft"),
-        
-        str8_lit("Token_TemplateDirective"),
-        
-        str8_lit("Token_EndOfFile"),
-    };
-    
+	// NOTE(sir->w7): Initializer is not a constant bullcrap, but this is really only a debug function, so it does not matter.
+	struct str8 token_type_str[] = {
+		str8_lit("Token_Unknown"),
+		str8_lit("Token_Identifier"),
+		str8_lit("Token_Semicolon"),
+
+		str8_lit("Token_CommentLine"),
+		str8_lit("Token_CommentBlock"),
+		str8_lit("Token_Whitespace"),
+
+		str8_lit("Token_ParentheticalOpen"),
+		str8_lit("Token_ParentheticalClose"),
+		str8_lit("Token_BraceOpen"),
+		str8_lit("Token_BraceClose"),
+
+		str8_lit("Token_FeedRight"),
+		str8_lit("Token_FeedLeft"),
+
+		str8_lit("Token_TemplateDirective"),
+
+		str8_lit("Token_EndOfFile"),
+	};
+
 	return token_type_str[type];
 }
 
@@ -91,44 +91,34 @@ tokenizer_token_inc_def(struct tokenizer *tokens)
 
 struct str8
 str8_get_token(enum token_type type,
-               struct tokenizer *tokens)
+	       struct tokenizer *tokens)
 {
 	if (type == Token_EndOfFile) return (struct str8){0};
-    
+
 	struct str8 result = {0};
 	int prev_offset = tokens->offset;
 	result.str = tokens->file_data.str + prev_offset;
-    
+
 	switch (type) {
-        case Token_Whitespace: {
-            tokenizer_token_inc_whitespace(tokens);
-		} break;
-        case Token_CommentLine: {
-            tokenizer_token_inc_comment_line(tokens);
-		} break;
-        case Token_CommentBlock: {
-            tokenizer_token_inc_comment_block(tokens);
-		} break;
-        case Token_BraceOpen:
-        case Token_BraceClose:
-        case Token_ParentheticalOpen:
-        case Token_ParentheticalClose: {
-            // We basically only want to grab the one character.
-            tokens->offset++;
-		} break;
-        default: {
-            tokenizer_token_inc_def(tokens);
-		} break;
+	case Token_Whitespace: { tokenizer_token_inc_whitespace(tokens); } break;
+	case Token_CommentLine: { tokenizer_token_inc_comment_line(tokens); } break;
+	case Token_CommentBlock: { tokenizer_token_inc_comment_block(tokens); } break;
+
+	case Token_BraceOpen:
+	case Token_BraceClose:
+	case Token_ParentheticalOpen:
+	case Token_ParentheticalClose: { tokens->offset++; } break;
+	default: { tokenizer_token_inc_def(tokens); } break;
 	}
-    
+
 	result.len = tokens->offset - prev_offset;
-    
+
 	// Rewinds the offset to prepare for a tokenizer increment
-    
+
 	// NOTE(sir->w): Is this really necessary though? Is the tokenizer
 	// increment any more than syntactic sugar?
 	tokens->offset--;
-    
+
 	return result;
 }
 
@@ -143,7 +133,7 @@ tokenizer_file(struct memory_arena *allocator, struct str8 filename)
 static inline char
 tokenizer_peek_next(struct tokenizer *tokens)
 {
-    return tokens->file_data.str[tokens->offset + 1];
+	return tokens->file_data.str[tokens->offset + 1];
 }
 
 // TODO(sir->w7): When tokenizer->offset goes beyond the total length of
@@ -155,54 +145,40 @@ tokenizer_get_at(struct tokenizer *tokens)
 	//if (tokenizer->offset >= tokenizer->file_data.len) return token;
     
 	switch (tokens->file_data.str[tokens->offset]) {
-        case '\0': {
-            tok.type = Token_EndOfFile;
-            // NOTE(sir->w7): We don't need a string for this, but wouldn't that complicate the developer style?
-		} break;
-        case '@': {
-            tok.type = Token_TemplateDirective;
-		} break;
+        case '\0': { tok.type = Token_EndOfFile; } break;
+        case '@': { tok.type = Token_TemplateDirective; } break;
+
         case ' ':
         case '\t':
         case '\r':
-        case '\n': {
-            tok.type = Token_Whitespace;
-		} break;
-        case '/': {
-            if (tokenizer_peek_next(tokens) == '/') {
-                tok.type = Token_CommentLine;
-            } else if (tokenizer_peek_next(tokens) == '*') {
-                tok.type = Token_CommentBlock;
-            }
-		} break;
-        case '{': {
-            tok.type = Token_BraceOpen;
-		} break;
-        case '}': {
-            tok.type = Token_BraceClose;
-		} break;
-        case '(': {
-            tok.type = Token_ParentheticalOpen;
-		} break;
-        case ')': {
-            tok.type = Token_ParentheticalClose;
-		} break;
-        case ';': {
-            tok.type = Token_Semicolon;
-		} break;
+        case '\n': { tok.type = Token_Whitespace; } break;
+	case '/': {
+		if (tokenizer_peek_next(tokens) == '/') {
+			tok.type = Token_CommentLine;
+		} else if (tokenizer_peek_next(tokens) == '*') {
+			tok.type = Token_CommentBlock;
+		}
+	} break;
+
+        case '{': { tok.type = Token_BraceOpen; } break;
+        case '}': { tok.type = Token_BraceClose; } break;
+        case '(': { tok.type = Token_ParentheticalOpen; } break;
+        case ')': { tok.type = Token_ParentheticalClose; } break;
+        case ';': { tok.type = Token_Semicolon; } break;
+
         case '<': {
-            if (tokenizer_peek_next(tokens) == '-') {
-                tok.type = Token_FeedLeft;
-            }
+		if (tokenizer_peek_next(tokens) == '-') {
+			tok.type = Token_FeedLeft;
+		}
         } break;
+
         case '-': {
-            if (tokenizer_peek_next(tokens) == '>') { 
-                tok.type = Token_FeedRight;
-            }
+		if (tokenizer_peek_next(tokens) == '>') { 
+			tok.type = Token_FeedRight;
+		}
         } break;
-        default: {
-            tok.type = Token_Identifier;
-		} break;
+
+        default: { tok.type = Token_Identifier; } break;
 	};
     
 	tok.str = str8_get_token(tok.type, tokens);
