@@ -1,6 +1,7 @@
 # Time to write a Makefile because I forgot how to write one.
 # https://makefiletutorial.com/
 
+# A comment so I can push more things
 CC = clang
 CFLAGS = -g -MMD -MP
 
