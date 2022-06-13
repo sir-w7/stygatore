@@ -44,4 +44,13 @@ void print_token(struct token token);
 struct token tokenizer_inc_all(struct tokenizer *tokens);
 struct token tokenizer_inc_no_whitespace(struct tokenizer *tokens);
 
+enum template_directive_type
+{
+	TemplateDirective_Undefined,
+	TemplateDirective_Output,
+	TemplateDirective_Declaration,
+};
+
+enum template_directive_type lex_template_directive(struct token tok);
+
 #endif

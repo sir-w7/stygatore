@@ -3,8 +3,9 @@
 
 struct symbol
 {
-	struct str8 name;
+	struct str8 str;
 	struct token *definition;
+	int line_number;
 
 	struct symbol *next;
 };
@@ -21,6 +22,6 @@ struct symbol_table
 #define GROWTH_RATE 2
 
 struct symbol_table create_symbol_table(struct memory_arena *arena);
-void symbol_table_push(struct symbol_table *table, struct symbol sym);
+void symbol_table_push(struct symbol_table *table, struct memory_arena *arena, struct symbol sym);
 
 #endif
