@@ -25,9 +25,12 @@ void parse_token_at(struct tokenizer *tokens,
 {
 	struct token tok = tokenizer_get_at(tokens);
 	if (tok.type == Token_TemplateDirective) {
-		if (lex_template_directive(tok) == TemplateDirective_Output) {
+		if (str8_compare(tok.str, str8_lit("@output"))) {
 			struct token next_tok = tokenizer_inc_no_whitespace(tokens);
-			settings->output_name = push_str8_copy(temp_allocator, next_tok.str);
+			settings->output_name =
+				push_str8_copy(temp_allocator, next_tok.str);
+		} else if (str8_compare(tok.str, str8_lit("@template"))) {
+			struct symbol sym = {0};
 		}
 	}
 }

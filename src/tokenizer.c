@@ -226,14 +226,3 @@ void print_token(struct token tok)
 	}
 	printnl();
 }
-
-enum template_directive_type
-lex_template_directive(struct token tok)
-{
-	enum template_directive_type type = TemplateDirective_Undefined;
-	if (str8_compare(tok.str, str8_lit("@output"))) {
-		type = TemplateDirective_Output;
-	}
-
-	return type;
-}

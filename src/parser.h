@@ -5,6 +5,8 @@ struct symbol
 {
 	struct str8 str;
 	struct token *definition;
+
+	// TODO(sir->w7): Implement line numbers in the file string.
 	int line_number;
 
 	struct symbol *next;
