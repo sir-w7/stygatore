@@ -1,21 +1,23 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-struct symbol
+typedef struct Symbol Symbol;
+struct Symbol
 {
-	struct str8 str;
-	struct token *definition;
-
+	Str8 str;
+	Token *definition;
+	
 	// TODO(sir->w7): Implement line numbers in the file string.
 	int line_number;
-
-	struct symbol *next;
+	
+	Symbol *next;
 };
 
-struct symbol_table
+typedef struct SymbolTable SymbolTable;
+struct SymbolTable
 {
-	struct symbol *syms;
-
+	Symbol *syms;
+	
 	u32 size;
 	u32 capacity;
 };
@@ -23,7 +25,7 @@ struct symbol_table
 #define INITIAL_CAPACITY 32
 #define GROWTH_RATE 2
 
-struct symbol_table create_symbol_table(struct memory_arena *arena);
-void symbol_table_push(struct symbol_table *table, struct memory_arena *arena, struct symbol sym);
+SymbolTable create_symbol_table(MemoryArena *arena);
+void symbol_table_push(SymbolTable *table, MemoryArena *arena, Symbol sym);
 
 #endif

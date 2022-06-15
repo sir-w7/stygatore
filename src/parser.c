@@ -3,33 +3,33 @@
 #include "tokenizer.h"
 #include "parser.h"
 
-struct symbol_table
-create_symbol_table(struct memory_arena *arena)
+SymbolTable
+create_symbol_table(MemoryArena *arena)
 {
-	struct symbol_table table = {0};
-
+	SymbolTable table = {0};
+	
 	table.capacity = INITIAL_CAPACITY;
-	table.syms = arena_push_array(arena, sizeof(struct symbol), table.capacity);
-
+	table.syms = arena_push_array(arena, sizeof(Symbol), table.capacity);
+	
 	return table;
 }
 
 
-void symbol_table_push(struct symbol_table *table, 
-		       struct memory_arena *arena, struct symbol sym)
+void symbol_table_push(SymbolTable *table, 
+					   MemoryArena *arena, Symbol sym)
 {
 	u64 bucket = djb2_hash(sym.str);
 	u64 idx = table->capacity % bucket;
-
+	
 	if (str8_is_nil(table->syms[idx].str)) {
 		table->syms[idx] = sym;
 		return;
 	}
-
-	struct symbol *sym_new = arena_push_struct(arena, struct symbol);
-
-	struct symbol *tail = &table->syms[idx];
+	
+	Symbol *sym_new = arena_push_struct(arena, Symbol);
+	
+	Symbol *tail = &table->syms[idx];
 	while (tail->next != NULL) tail = tail->next;
-
+	
 	tail->next = sym_new;
 }

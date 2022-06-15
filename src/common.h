@@ -60,7 +60,8 @@ for (int _i_##__LINE__ = ((start), 0);  _i_##__LINE__ == 0; _i_##__LINE__ += 1, 
 //-------------------------------Memory-------------------------------
 #define DEF_ALIGN (2 * sizeof(void *))
 
-struct memory_arena
+typedef struct MemoryArena MemoryArena;
+struct MemoryArena
 {
 	u8 *mem;
 	u64 size;
@@ -74,20 +75,21 @@ uintptr_t align_forth(uintptr_t ptr, u32 align);
 void memory_copy(void *dest, void *src, u64 size);
 void memory_set(void *ptr, u32 value, u64 size);
 
-struct memory_arena init_arena(u64 size);
-void free_arena(struct memory_arena *arena);
+MemoryArena init_arena(u64 size);
+void free_arena(MemoryArena *arena);
 
-void arena_reset(struct memory_arena *arena);
-void *arena_push_align(struct memory_arena *arena, u64 size, u32 align);
+void arena_reset(MemoryArena *arena);
+void *arena_push_align(MemoryArena *arena, u64 size, u32 align);
 
-struct temp_arena { 
-	struct memory_arena *parent_arena;
+typedef struct TempArena TempArena;
+struct TempArena { 
+	MemoryArena *parent_arena;
 	u64 prev_offset;
 	u64 curr_offset;
 };
 
-struct temp_arena begin_temp_arena(struct memory_arena *arena);
-void end_temp_arena(struct temp_arena *temp_arena);
+TempArena begin_temp_arena(MemoryArena *arena);
+void end_temp_arena(TempArena *temp_arena);
 
 #define arena_push(arena, size) arena_push_align(arena, size, DEF_ALIGN)
 #define arena_push_array(arena, size, count) arena_push(arena, size * count)
@@ -97,7 +99,8 @@ void end_temp_arena(struct temp_arena *temp_arena);
 #define temp_arena_push(temp, size) arena_push(temp->parent_arena, size)
 
 //-------------------------------String-------------------------------
-struct str8
+typedef struct Str8 Str8;
+struct Str8
 {
 	char *str;
 	u64 len;
@@ -105,41 +108,43 @@ struct str8
 
 u64 cstr_len(char *cstr);
 
-struct str8 push_str8(struct memory_arena *allocator, u8 *cstr, u64 len);
-struct str8 push_str8_copy(struct memory_arena *allocator, struct str8 str);
-struct str8 push_str8_concat(struct memory_arena *allocator, struct str8 init, struct str8 add);
+Str8 push_str8(MemoryArena *allocator, u8 *cstr, u64 len);
+Str8 push_str8_copy(MemoryArena *allocator, Str8 str);
+Str8 push_str8_concat(MemoryArena *allocator, Str8 init, Str8 add);
 
 // Returns true if the strings are the same, false if they are different.
-b32 str8_compare(struct str8 str1, struct str8 str2);
+b32 str8_compare(Str8 str1, Str8 str2);
 
-struct str8node
+typedef struct Str8Node Str8Node;
+struct Str8Node
 {
-	struct str8 data;
-	struct str8node *next;
+	Str8 data;
+	Str8Node *next;
 };
 
-struct str8list
+typedef struct Str8List Str8List;
+struct Str8List
 {
-	struct str8node *head;
-	struct str8node *tail;
+	Str8Node *head;
+	Str8Node *tail;
 };
 
-void str8list_push(struct str8list *list, struct memory_arena *allocator, struct str8 str);
+void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);
 
-#define str8_lit(string) ((struct str8){.str = string, .len = sizeof(string) - 1})
+#define str8_lit(string) ((Str8){.str = string, .len = sizeof(string) - 1})
 #define str8_exp(string) string.len ? (int)string.len : 4, string.len ? string.str : "null"
 
-#define str8_from_cstr(cstr) ((struct str8){.str = cstr, .len = cstr_len(cstr)})
+#define str8_from_cstr(cstr) ((Str8){.str = cstr, .len = cstr_len(cstr)})
 #define str8_is_nil(string) (string.len == 0)
 
 // File and string utilities.
-struct str8 file_working_dir(struct str8 filename);
-struct str8 file_base_name(struct str8 filename);
-struct str8 file_ext(struct str8 filename);
-struct str8 read_file(struct memory_arena *allocator, struct str8 filename);
-struct str8list arg_list(struct memory_arena *allocator, int argc, char **argv);
+Str8 file_working_dir(Str8 filename);
+Str8 file_base_name(Str8 filename);
+Str8 file_ext(Str8 filename);
+Str8 read_file(MemoryArena *allocator, Str8 filename);
+Str8List arg_list(MemoryArena *allocator, int argc, char **argv);
 
 // djb2 hash function for string hashing.
-u64 djb2_hash(struct str8 str);
+u64 djb2_hash(Str8 str);
 
 #endif
