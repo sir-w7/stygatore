@@ -161,11 +161,13 @@ tokenizer_get_at(struct tokenizer *tokens)
 		}
 	} break;
 
+        case ';': { tok.type = Token_Semicolon; } break;
+	case ',': { tok.type = Token_Comma; } break;
+
         case '{': { tok.type = Token_BraceOpen; } break;
         case '}': { tok.type = Token_BraceClose; } break;
         case '(': { tok.type = Token_ParentheticalOpen; } break;
         case ')': { tok.type = Token_ParentheticalClose; } break;
-        case ';': { tok.type = Token_Semicolon; } break;
 
         case '<': {
 		if (tokenizer_peek_next(tokens) == '-') {

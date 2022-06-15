@@ -1,6 +1,8 @@
 @output vector.h
 
+// Is the <- feed operator even necessary, or just syntactic sugar?
 @template Vec4 <- T
+
 // Do we want to output comments like this into the output file?
 // No, the template file is meant for reading, while the
 // output file is mostly for compiler powerlifting.

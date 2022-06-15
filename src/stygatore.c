@@ -24,6 +24,8 @@ void parse_token_at(struct tokenizer *tokens,
 		    struct memory_arena *temp_allocator)
 {
 	struct token tok = tokenizer_get_at(tokens);
+	print_token(tok);
+#if 0
 	if (tok.type == Token_TemplateDirective) {
 		if (str8_compare(tok.str, str8_lit("@output"))) {
 			struct token next_tok = tokenizer_inc_no_whitespace(tokens);
@@ -33,10 +35,11 @@ void parse_token_at(struct tokenizer *tokens,
 			struct symbol sym = {0};
 		}
 	}
+#endif
 }
 
 void handle_file(struct memory_arena *temp_allocator,
-                 struct str8 file)
+		 struct str8 file)
 {
 	struct str8 working_dir = file_working_dir(file);
 	struct str8 base_name = file_base_name(file);

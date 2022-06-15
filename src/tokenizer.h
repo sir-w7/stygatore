@@ -5,7 +5,9 @@ enum token_type
 {
 	Token_Unknown,
 	Token_Identifier,
+
 	Token_Semicolon,
+	Token_Comma,
 
 	Token_CommentLine,
 	Token_CommentBlock,
