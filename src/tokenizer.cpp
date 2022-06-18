@@ -1,35 +1,5 @@
+// TODO(sir->w7): Fix this implementation because it's so idiotic. Like bruh, why does tokenizer_get_at move the tokenizer? It's only supposed to read where the tokenizer is at.
 #include "tokenizer.h"
-
-styx_function Str8
-str8_token_type(StyxTokenType type)
-{
-	// NOTE(sir->w7): Initializer is not a constant bullcrap, but this is really only a debug function, so it does not matter.
-	Str8 token_type_str[] = {
-		str8_lit("StyxToken_Unknown"),
-		str8_lit("StyxToken_Identifier"),
-		
-		str8_lit("StyxToken_Semicolon"),
-		str8_lit("StyxToken_Comma"),
-		
-		str8_lit("StyxToken_CommentLine"),
-		str8_lit("StyxToken_CommentBlock"),
-		str8_lit("StyxToken_Whitespace"),
-		
-		str8_lit("StyxToken_ParentheticalOpen"),
-		str8_lit("StyxToken_ParentheticalClose"),
-		str8_lit("StyxToken_BraceOpen"),
-		str8_lit("StyxToken_BraceClose"),
-		
-		str8_lit("StyxToken_FeedRight"),
-		str8_lit("StyxToken_FeedLeft"),
-		
-		str8_lit("StyxToken_TemplateDirective"),
-		
-		str8_lit("StyxToken_EndOfFile"),
-	};
-	
-	return token_type_str[type];
-}
 
 styx_inline void
 tokenizer_token_inc_comment_line(StyxTokenizer *tokens)
@@ -99,7 +69,7 @@ tokenizer_token_inc_def(StyxTokenizer *tokens)
 styx_function Str8
 str8_get_token(StyxTokenType type, StyxTokenizer *tokens)
 {
-	if (type == StyxToken_EndOfFile) return (Str8){0};
+	if (type == StyxToken_EndOfFile) return Str8{};
 	
 	Str8 result = {0};
 	int prev_offset = tokens->offset;
@@ -226,18 +196,49 @@ tokenizer_inc_no_whitespace(StyxTokenizer *tokens)
 	return tok;
 }
 
+styx_function Str8
+str8_token_type(StyxTokenType type)
+{
+	// NOTE(sir->w7): Initializer is not a constant bullcrap, but this is really only a debug function, so it does not matter.
+	Str8 token_type_str[] = {
+		str8_lit("StyxToken_Unknown"),
+		str8_lit("StyxToken_Identifier"),
+		
+		str8_lit("StyxToken_Semicolon"),
+		str8_lit("StyxToken_Comma"),
+		
+		str8_lit("StyxToken_CommentLine"),
+		str8_lit("StyxToken_CommentBlock"),
+		str8_lit("StyxToken_Whitespace"),
+		
+		str8_lit("StyxToken_ParentheticalOpen"),
+		str8_lit("StyxToken_ParentheticalClose"),
+		str8_lit("StyxToken_BraceOpen"),
+		str8_lit("StyxToken_BraceClose"),
+		
+		str8_lit("StyxToken_FeedRight"),
+		str8_lit("StyxToken_FeedLeft"),
+		
+		str8_lit("StyxToken_TemplateDirective"),
+		
+		str8_lit("StyxToken_EndOfFile"),
+	};
+	
+	return token_type_str[type];
+}
+
 styx_function void
 print_token(StyxToken tok)
 {
-	printf("tok.type: %-25.*s\t", str8_exp(str8_token_type(tok.type)));
-	printf("tok.str: %-16.*s\t", str8_exp(tok.str));
+	printf("tok.type: %-32.*s  ", str8_exp(str8_token_type(tok.type)));
+	printf("tok.str: %-16.*s  ", str8_exp(tok.str));
     printf("tok.line: %d", tok.line);
 	printnl();
     
     // NOTE(sir->w7): Since we're not really going to debug whitespace as much at the moment.
 #if 0
 	for (int i = 0; i < tok.str.len; ++i) {
-		if (tok.str.str[i] == '\t') {
+        if (tok.str.str[i] == '\t') {
 			printf("\\t");
 		} else if (tok.str.str[i] == '\r') {
 			printf("\\r");

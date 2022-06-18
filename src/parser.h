@@ -1,7 +1,6 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-typedef struct Symbol Symbol;
 struct Symbol
 {
 	Str8 str;
@@ -13,7 +12,6 @@ struct Symbol
 	Symbol *next;
 };
 
-typedef struct SymbolTable SymbolTable;
 struct SymbolTable
 {
 	Symbol *syms;

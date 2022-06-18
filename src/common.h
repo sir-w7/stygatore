@@ -155,11 +155,39 @@ typedef u64 b64;
 #define styx_persist  static
 #define styx_global   static
 
+#define concat_internal(x, y) x##y
+#define concat(x, y) concat_internal(x, y)
+
 #if STYX_COMPILER_MSVC
 # define styx_inline inline
 #else
 // TODO(sir->w7): Look into this, along with function attributes to find how to get GCC and Clang to inline functions.
 # define styx_inline static inline
+#endif
+
+#if STYX_LANG_CPP
+// NOTE(sir->w7): Stolen from Jon Blow.
+
+template<typename T>
+struct ExitScope {
+    T lambda;
+    ExitScope(T lambda) : lambda(lambda){}
+    ~ExitScope() { lambda(); }
+    ExitScope(const ExitScope&);
+    
+    private:
+    ExitScope& operator =(const ExitScope&);
+};
+
+struct ExitScopeHelp {
+    template<typename T>
+        ExitScope<T> operator+(T t){ return t;}
+};
+
+#define defer const auto& concat(defer__, __COUNTER__) = ExitScopeHelp() + [&]()
+
+#else
+# error "No defer mechanism implemented."
 #endif
 
 #define kilobytes(count) (1024ull * (u64)count)
@@ -196,7 +224,6 @@ for (int _i_##__LINE__ = ((start), 0);  _i_##__LINE__ == 0; _i_##__LINE__ += 1, 
 //-------------------------------Memory-------------------------------
 #define DEF_ALIGN (2 * sizeof(void *))
 
-typedef struct MemoryArena MemoryArena;
 struct MemoryArena
 {
 	u8 *mem;
@@ -217,7 +244,6 @@ styx_function void free_arena(MemoryArena *arena);
 styx_function void arena_reset(MemoryArena *arena);
 styx_function void *arena_push_align(MemoryArena *arena, u64 size, u32 align);
 
-typedef struct TempArena TempArena;
 struct TempArena { 
 	MemoryArena *parent_arena;
 	u64 prev_offset;
@@ -229,6 +255,8 @@ styx_function void end_temp_arena(TempArena *temp_arena);
 
 #define arena_push(arena, size) arena_push_align(arena, size, DEF_ALIGN)
 #define arena_push_array(arena, size, count) arena_push(arena, size * count)
+#define arena_push_struct_array(arena, structure, count) \
+(structure *)arena_push(arena, sizeof(structure) * count)
 #define arena_push_struct(arena, structure) (structure *)arena_push(arena, sizeof(structure))
 
 #define temp_arena_push_align(temp, size, align) arena_push_align(temp->parent_arena, size, align)
@@ -267,10 +295,11 @@ struct Str8List
 
 styx_function void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);
 
-#define str8_lit(string) ((Str8){.str = string, .len = sizeof(string) - 1})
+#define str8_lit(string) (Str8{string, sizeof(string) - 1})
 #define str8_exp(string) string.len ? (int)string.len : 4, string.len ? string.str : "null"
+#define str8_fmt "%.*s"
 
-#define str8_from_cstr(cstr) ((Str8){.str = cstr, .len = cstr_len(cstr)})
+#define str8_from_cstr(cstr) (Str8{cstr, cstr_len(cstr)})
 #define str8_is_nil(string) (string.len == 0)
 
 // File and string utilities.

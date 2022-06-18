@@ -1,12 +1,7 @@
-// TODO(sir->w7): A strong powerful string type for easier parsing.
-// TODO(sir->w7): Template concatenation for even more powerful templates.
-
-// NOTE(sir->w7): Because this is more of an open-source project, rather than doing a unity/jumbo build, we will opt for a modular compilation with multiple C files just to adhere to more standard C programming practices. However, should we typedef structs then? Because some programmers typedef the structs, while some don't. It's more a matter of style than a matter of standard. Same goes for unity build, but people almost always tend to go for modular compilation.
-
 // NOTE(sir->w7): We should dump all the code into one big file just to make everything easier  A big jumbo file.
-#include "common.c"
-#include "tokenizer.c"
-#include "parser.c"
+#include "common.cpp"
+#include "tokenizer.cpp"
+#include "parser.cpp"
 
 #define STYX_EXT "styxgen"
 
@@ -17,27 +12,28 @@ struct CompilationSettings
 };
 
 styx_function void
-handle_file(MemoryArena *temp_allocator, Str8 file)
+handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
 {
-	Str8 working_dir = file_working_dir(file);
-	Str8 base_name = file_base_name(file);
-	Str8 ext = file_ext(file);
+    Str8 file_abspath = get_file_abspath(temp_allocator, file_relpath);
+    
+    Str8 working_dir = file_working_dir(file_abspath);
+	Str8 base_name = file_base_name(file_abspath);
+	Str8 ext = file_ext(file_abspath);
 	
-	println("full path: %.*s", str8_exp(file));
-	println("working_dir: %.*s", str8_exp(working_dir));
-	println("base_name: %.*s", str8_exp(base_name));
-	println("ext: %.*s", str8_exp(ext));
+	println("full path: " str8_fmt, str8_exp(file_abspath));
+	println("working_dir: " str8_fmt, str8_exp(working_dir));
+	println("base_name: " str8_fmt, str8_exp(base_name));
+	println("ext: " str8_fmt, str8_exp(ext));
 	
 	CompilationSettings settings = {0};
 	SymbolTable table = create_symbol_table(temp_allocator);
-	StyxTokenizer tokens = tokenizer_file(temp_allocator, file);
+	StyxTokenizer tokens = tokenizer_file(temp_allocator, file_abspath);
 	
 	for (StyxToken tok = tokenizer_get_at(&tokens);
 		 tok.type != StyxToken_EndOfFile;
 		 tok = tokenizer_inc_no_whitespace(&tokens)) {
 		print_token(tok);
         
-#if 0
 		if (tok.type == StyxToken_TemplateDirective) {
 			if (str8_compare(tok.str, str8_lit("@output"))) {
 				// NOTE(sir->w7): If it is output directive.
@@ -48,10 +44,9 @@ handle_file(MemoryArena *temp_allocator, Str8 file)
 				Symbol sym = {0};
 			}
 		}
-#endif
 	}
 	
-	println("Output file: %.*s", str8_exp(settings.output_name));
+	println("Output file: " str8_fmt, str8_exp(settings.output_name));
 	printnl();
 }
 

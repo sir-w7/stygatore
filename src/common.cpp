@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "common.h"
-#include "win32/win32_platform.c"
+#include "win32/win32_platform.cpp"
 
 styx_inline b32
 is_power_of_two(uintptr_t x) 
@@ -55,7 +55,7 @@ init_arena(u64 size)
 	assert(size);
 	
 	MemoryArena arena = {0};
-	arena.mem = reserve_mem(size);
+	arena.mem = (u8 *)reserve_mem(size);
 	arena.size = size;
 	
 	return arena;
@@ -65,7 +65,7 @@ styx_function void
 free_arena(MemoryArena *arena)
 {
 	free_mem(arena->mem, arena->size);
-	*arena = (MemoryArena){0};
+	*arena = MemoryArena{};
 }
 
 styx_function void
@@ -97,14 +97,7 @@ arena_push_align(MemoryArena *arena, u64 size, u32 align)
 styx_function TempArena
 begin_temp_arena(MemoryArena *arena)
 {
-	TempArena temp = {
-		.parent_arena = arena,
-		
-		.prev_offset = arena->prev_offset,
-		.curr_offset = arena->curr_offset,
-	};
-	
-	return temp;
+	return TempArena{arena, arena->prev_offset, arena->curr_offset};
 }
 
 // NOTE(sir->w): This is assuming no allocations is made on the main arena,
@@ -202,9 +195,7 @@ str8list_push(Str8List *list,
 styx_function Str8
 file_working_dir(Str8 filename)
 {
-	Str8 working_dir = {
-		.str = filename.str,
-	};
+	Str8 working_dir = {filename.str};
 	for (int i = filename.len - 1; i >= 0; --i) {
 		if (filename.str[i] == '/') {
 			working_dir.len = i + 1;
@@ -269,7 +260,7 @@ read_file(MemoryArena *allocator, Str8 filename)
 	file_size = (u64)ftell(file);
 	fseek(file, 0, SEEK_SET);
 	
-	file_data.str = arena_push(allocator, file_size + 1);
+	file_data.str = (char *)arena_push(allocator, file_size + 1);
 	file_data.len = file_size;
 	
 	fread(file_data.str, file_size, 1, file);

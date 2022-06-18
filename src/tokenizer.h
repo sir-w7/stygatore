@@ -1,7 +1,6 @@
 #ifndef TOKENIZER_H
 #define TOKENIZER_H
 
-typedef enum StyxTokenType StyxTokenType;
 enum StyxTokenType
 {
 	StyxToken_Unknown,
@@ -27,7 +26,6 @@ enum StyxTokenType
 	StyxToken_EndOfFile,
 };
 
-typedef struct StyxToken StyxToken;
 struct StyxToken
 {
 	StyxTokenType type;
@@ -36,7 +34,6 @@ struct StyxToken
 	u32 line;
 };
 
-typedef struct StyxTokenizer StyxTokenizer;
 struct StyxTokenizer
 {
 	Str8 file_data;

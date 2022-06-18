@@ -6,7 +6,7 @@ create_symbol_table(MemoryArena *arena)
 	SymbolTable table = {0};
 	
 	table.capacity = INITIAL_CAPACITY;
-	table.syms = arena_push_array(arena, sizeof(Symbol), table.capacity);
+	table.syms = arena_push_struct_array(arena, Symbol, table.capacity);
 	
 	return table;
 }

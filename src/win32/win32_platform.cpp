@@ -39,7 +39,10 @@ styx_inline b32
 is_file(Str8 path)
 {
 	DWORD file_attr = GetFileAttributesA(path.str);
-	return file_attr == FILE_ATTRIBUTE_NORMAL;
+    
+    // NOTE(sir->w7): If the function succeeds and returns a file attribute that isn't a directory, we assume it's a file.
+	return (file_attr != INVALID_FILE_ATTRIBUTES &&
+            !(file_attr & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 styx_function Str8 
@@ -69,17 +72,18 @@ get_dir_list_ext(MemoryArena *allocator,
 	
 	{
 		// NOTE(sir->w7): Win32 API is pretty dumb, so we need to rework the string while keeping compatibility with Linux.
-		
 		TempArena scratch = begin_temp_arena(allocator);
-		Str8 dir_path_hacked = {0};
-		if (dir_path.str[dir_path.len - 1] == '\\' ||
-			dir_path.str[dir_path.len - 1] == '/') {
-			dir_path_hacked = push_str8_concat(allocator, dir_path, str8_lit("*"));
-		} else {
-			dir_path_hacked = push_str8_concat(allocator, dir_path, str8_lit("/*"));
-		}
-		search_handle = FindFirstFileA(dir_path_hacked.str, &find_data);
-	}
+        defer { end_temp_arena(&scratch); };
+        
+        Str8 dir_path_hacked = {0};
+        if (dir_path.str[dir_path.len - 1] == '\\' ||
+            dir_path.str[dir_path.len - 1] == '/') {
+            dir_path_hacked = push_str8_concat(allocator, dir_path, str8_lit("*"));
+        } else {
+            dir_path_hacked = push_str8_concat(allocator, dir_path, str8_lit("/*"));
+        }
+        search_handle = FindFirstFileA(dir_path_hacked.str, &find_data);
+    }
 	
 	if (search_handle == INVALID_HANDLE_VALUE) {
 		fprintln(stderr, "Not a directory. FindFirstFileA failed.");
@@ -94,13 +98,16 @@ get_dir_list_ext(MemoryArena *allocator,
 		if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
 		    str8_compare(file_ext(filename), ext)) {
 			// TODO(sir->w7): For loop-based defer macro to simplify this interface.
-			TempArena scratch = {0};
 			Str8 file_rel = {0};
-			defer_block(scratch = begin_temp_arena(allocator), end_temp_arena(&scratch)) {
+			
+            {
+                TempArena scratch = begin_temp_arena(allocator);
+                defer { end_temp_arena(&scratch); };
+                
 				file_rel = push_str8_concat(allocator, dir_path, str8_lit("/"));
 				file_rel = push_str8_concat(allocator, file_rel, filename);
-			}
-			
+            }
+            
 			Str8 file_path = get_file_abspath(allocator, file_rel);
 			str8list_push(&dir_file_list, allocator, file_path);
 		}

@@ -5,12 +5,12 @@ setlocal EnableDelayedExpansion
 set COMPILER=cl
 set COMPILE_FLAGS=/MP /FC /nologo /Zi 
 
+set LINK_FLAGS=/incremental:no
+
 set PLATFORM=..\src\win32
 set SRC=..\src
 
-set SRC_FILES=%PLATFORM%\win32_platform.c %SRC%\common.c %SRC%\stygatore.c %SRC%\tokenizer.c %SRC%\parser.c
-
 if not exist build mkdir build
 pushd build
-%COMPILER% %COMPILE_FLAGS% ..\src\stygatore.c /link /out:stygatore.exe
+%COMPILER% %COMPILE_FLAGS% ..\src\stygatore.cpp /link %LINK_FLAGS% /out:stygatore.exe
 popd
