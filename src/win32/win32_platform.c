@@ -1,10 +1,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include "../common.h"
 #include "../platform.h"
 
-f64 get_time()
+styx_function f64
+get_time()
 {
 	static LARGE_INTEGER performance_frequency = {0};
 	if(performance_frequency.QuadPart == 0) 
@@ -15,30 +15,34 @@ f64 get_time()
 	return (f64)time_int.QuadPart / (f64)performance_frequency.QuadPart;
 }
 
-void *reserve_mem(u64 size) 
+styx_inline void *
+reserve_mem(u64 size) 
 {
 	return VirtualAlloc(0, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 }
 
-void free_mem(void *mem, u64 size)
+styx_inline void 
+free_mem(void *mem, u64 size)
 {
 	VirtualFree(mem, 0, MEM_RELEASE);
 }
 
-b32 is_dir(Str8 path)
+styx_inline b32 
+is_dir(Str8 path)
 {
 	DWORD file_attr = GetFileAttributesA(path.str);
 	return (file_attr != INVALID_FILE_ATTRIBUTES &&
 			(file_attr & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-b32 is_file(Str8 path)
+styx_inline b32 
+is_file(Str8 path)
 {
 	DWORD file_attr = GetFileAttributesA(path.str);
 	return file_attr == FILE_ATTRIBUTE_NORMAL;
 }
 
-Str8 
+styx_function Str8 
 get_file_abspath(MemoryArena *allocator, Str8 file_path)
 {
 	static char buffer[256];
@@ -54,7 +58,7 @@ get_file_abspath(MemoryArena *allocator, Str8 file_path)
 	return push_str8_copy(allocator, str8_from_cstr(buffer));
 }
 
-Str8List 
+styx_function Str8List 
 get_dir_list_ext(MemoryArena *allocator, 
 				 Str8 dir_path, Str8 ext)
 {

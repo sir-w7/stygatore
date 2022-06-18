@@ -1,52 +1,56 @@
 #ifndef TOKENIZER_H
 #define TOKENIZER_H
 
-typedef enum TokenType TokenType;
-enum TokenType
+typedef enum StyxTokenType StyxTokenType;
+enum StyxTokenType
 {
-	Token_Unknown,
-	Token_Identifier,
+	StyxToken_Unknown,
+	StyxToken_Identifier,
 	
-	Token_Semicolon,
-	Token_Comma,
+	StyxToken_Semicolon,
+	StyxToken_Comma,
 	
-	Token_CommentLine,
-	Token_CommentBlock,
-	Token_Whitespace,
+	StyxToken_CommentLine,
+	StyxToken_CommentBlock,
+	StyxToken_Whitespace,
 	
-	Token_ParentheticalOpen,
-	Token_ParentheticalClose,
-	Token_BraceOpen,
-	Token_BraceClose,
+	StyxToken_ParentheticalOpen,
+	StyxToken_ParentheticalClose,
+	StyxToken_BraceOpen,
+	StyxToken_BraceClose,
 	
-	Token_FeedRight,
-	Token_FeedLeft,
+	StyxToken_FeedRight,
+	StyxToken_FeedLeft,
 	
-	Token_TemplateDirective,
+	StyxToken_TemplateDirective,
 	
-	Token_EndOfFile,
+	StyxToken_EndOfFile,
 };
 
-typedef struct Token Token;
-struct Token
+typedef struct StyxToken StyxToken;
+struct StyxToken
 {
-	TokenType type;
+	StyxTokenType type;
 	Str8 str;
+	
+	u32 line;
 };
 
-typedef struct Tokenizer Tokenizer;
-struct Tokenizer
+typedef struct StyxTokenizer StyxTokenizer;
+struct StyxTokenizer
 {
 	Str8 file_data;
-	int offset;
+	
+	u32 offset;
+	u32 line_at;
 };
 
-Str8 str8_get_token(TokenType type, Tokenizer *tokens);
-Tokenizer tokenizer_file(MemoryArena *allocator, Str8 filename);
-Token tokenizer_get_at(Tokenizer *tokens);
-void print_token(Token token);
+styx_function Str8 str8_get_token(StyxTokenType type, StyxTokenizer *tokens);
+styx_function StyxTokenizer tokenizer_file(MemoryArena *allocator, Str8 filename);
+styx_function StyxToken tokenizer_get_at(StyxTokenizer *tokens);
+styx_function void print_token(StyxToken token);
 
-Token tokenizer_inc_all(Tokenizer *tokens);
-Token tokenizer_inc_no_whitespace(Tokenizer *tokens);
+styx_function StyxToken tokenizer_inc_all(StyxTokenizer *tokens);
+styx_function StyxToken tokenizer_inc_no_whitespace(StyxTokenizer *tokens);
 
 #endif

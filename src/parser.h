@@ -5,7 +5,7 @@ typedef struct Symbol Symbol;
 struct Symbol
 {
 	Str8 str;
-	Token *definition;
+	StyxToken *definition;
 	
 	// TODO(sir->w7): Implement line numbers in the file string.
 	int line_number;

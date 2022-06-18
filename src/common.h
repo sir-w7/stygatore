@@ -5,6 +5,131 @@
 #include <stdint.h>
 #include <assert.h>
 
+#if defined(_MSC_VER)
+# define STYX_COMPILER_MSVC 1
+
+# if defined(_WIN32)
+#  define STYX_OS_WINDOWS 1
+# else
+#  error Unknown OS.
+# endif
+
+# if defined(_M_AMD64)
+#  define STYX_ARCH_X64 1
+# elif defined(_M_I86)
+#  define STYX_ARCH_X86 1
+# elif defined(_M_AMD64)
+#  define STYX_ARCH_ARM
+# else
+#  error Unknown arch.
+# endif
+
+#elif defined(__clang__)
+# define STYX_COMPILER_CLANG 1
+
+# if defined(_WIN32)
+#  define STYX_OS_WINDOWS 1
+# elif defined(__gnu_linux__)
+#  define STYX_OS_LINUX 1
+# elif defined(__APPLE__) && defined(__MACH__)
+#  define STYX_OS_MAC 1
+# else
+#  error Unknown OS.
+# endif
+
+# if defined(__amd64__)
+#  define STYX_ARCH_X64 1
+# elif defined(__i386__)
+#  define STYX_ARCH_X86 1
+# elif defined(__arm__)
+#  define STYX_ARCH_ARM 1
+# else
+#  error Unknown arch.
+# endif
+
+#elif defined(__GNUC__)
+# define STYX_COMPILER_GCC 1
+
+# if defined(_WIN32)
+#  define STYX_OS_WINDOWS 1
+# elif defined(__gnu_linux__)
+#  define STYX_OS_LINUX 1
+# elif defined(__APPLE__) && defined(__MACH__)
+#  define STYX_OS_MAC 1
+# else
+#  error Unknown OS.
+# endif
+
+# if defined(__amd64__)
+#  define STYX_ARCH_X64 1
+# elif defined(__i386__)
+#  define STYX_ARCH_X86 1
+# elif defined(__arm__)
+#  define STYX_ARCH_ARM
+# else
+#  error Unknown arch.
+# endif
+
+#else
+# error Unknown compiler.
+#endif
+
+#if defined(__cplusplus)
+# define STYX_LANG_CPP 1
+#else
+# define STYX_LANG_C 1
+#endif
+
+#if !defined(STYX_COMPILER_MSVC)
+# define STYX_COMPILER_MSVC 0
+#endif
+
+#if !defined(STYX_COMPILER_GCC)
+# define STYX_COMPILER_GCC 0
+#endif
+
+#if !defined(STYX_COMPILER_CLANG)
+# define STYX_COMPILER_CLANG 0
+#endif
+
+#if !defined(STYX_OS_WINDOWS)
+# define STYX_OS_WINDOWS 0
+#endif
+
+#if !defined(STYX_OS_LINUX)
+# define STYX_OS_LINUX 0
+#endif
+
+#if !defined(STYX_OS_MAC)
+# define STYX_OS_MAC 0
+#endif
+
+#if !defined(STYX_ARCH_X64)
+# define STYX_ARCH_X64 0
+#endif
+
+#if !defined(STYX_ARCH_X86)
+# define STYX_ARCH_X86 0
+#endif
+
+#if !defined(STYX_ARCH_ARM)
+# define STYX_ARCH_ARM 0
+#endif
+
+#if defined(NDEBUG)
+# define STYX_RELEASE 1 
+#else
+# define STYX_DEBUG 1
+#endif
+
+#if !defined(STYX_RELEASE)
+# define STYX_RELEASE 0
+#endif
+
+#if !defined(STYX_DEBUG)
+# define STYX_DEBUG 0
+#endif 
+
 typedef int8_t  i8;
 typedef int16_t i16;
 typedef int32_t i32;
@@ -25,6 +150,17 @@ typedef u64 b64;
 
 #define FALSE 0
 #define TRUE  1
+
+#define styx_function static
+#define styx_persist  static
+#define styx_global   static
+
+#if STYX_COMPILER_MSVC
+# define styx_inline inline
+#else
+// TODO(sir->w7): Look into this, along with function attributes to find how to get GCC and Clang to inline functions.
+# define styx_inline static inline
+#endif
 
 #define kilobytes(count) (1024ull * (u64)count)
 #define megabytes(count) (1024ull * (u64)kilobytes(count))
@@ -70,16 +206,16 @@ struct MemoryArena
 	u64 curr_offset;
 };
 
-uintptr_t align_forth(uintptr_t ptr, u32 align);
+styx_function uintptr_t align_forth(uintptr_t ptr, u32 align);
 
-void memory_copy(void *dest, void *src, u64 size);
-void memory_set(void *ptr, u32 value, u64 size);
+styx_function void memory_copy(void *dest, void *src, u64 size);
+styx_function void memory_set(void *ptr, u32 value, u64 size);
 
-MemoryArena init_arena(u64 size);
-void free_arena(MemoryArena *arena);
+styx_function MemoryArena init_arena(u64 size);
+styx_function void free_arena(MemoryArena *arena);
 
-void arena_reset(MemoryArena *arena);
-void *arena_push_align(MemoryArena *arena, u64 size, u32 align);
+styx_function void arena_reset(MemoryArena *arena);
+styx_function void *arena_push_align(MemoryArena *arena, u64 size, u32 align);
 
 typedef struct TempArena TempArena;
 struct TempArena { 
@@ -88,8 +224,8 @@ struct TempArena {
 	u64 curr_offset;
 };
 
-TempArena begin_temp_arena(MemoryArena *arena);
-void end_temp_arena(TempArena *temp_arena);
+styx_function TempArena begin_temp_arena(MemoryArena *arena);
+styx_function void end_temp_arena(TempArena *temp_arena);
 
 #define arena_push(arena, size) arena_push_align(arena, size, DEF_ALIGN)
 #define arena_push_array(arena, size, count) arena_push(arena, size * count)
@@ -106,14 +242,14 @@ struct Str8
 	u64 len;
 };
 
-u64 cstr_len(char *cstr);
+styx_function u64 cstr_len(char *cstr);
 
-Str8 push_str8(MemoryArena *allocator, u8 *cstr, u64 len);
-Str8 push_str8_copy(MemoryArena *allocator, Str8 str);
-Str8 push_str8_concat(MemoryArena *allocator, Str8 init, Str8 add);
+styx_function Str8 push_str8(MemoryArena *allocator, u8 *cstr, u64 len);
+styx_function Str8 push_str8_copy(MemoryArena *allocator, Str8 str);
+styx_function Str8 push_str8_concat(MemoryArena *allocator, Str8 init, Str8 add);
 
 // Returns true if the strings are the same, false if they are different.
-b32 str8_compare(Str8 str1, Str8 str2);
+styx_function b32 str8_compare(Str8 str1, Str8 str2);
 
 typedef struct Str8Node Str8Node;
 struct Str8Node
@@ -129,7 +265,7 @@ struct Str8List
 	Str8Node *tail;
 };
 
-void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);
+styx_function void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);
 
 #define str8_lit(string) ((Str8){.str = string, .len = sizeof(string) - 1})
 #define str8_exp(string) string.len ? (int)string.len : 4, string.len ? string.str : "null"
@@ -138,13 +274,13 @@ void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);
 #define str8_is_nil(string) (string.len == 0)
 
 // File and string utilities.
-Str8 file_working_dir(Str8 filename);
-Str8 file_base_name(Str8 filename);
-Str8 file_ext(Str8 filename);
-Str8 read_file(MemoryArena *allocator, Str8 filename);
-Str8List arg_list(MemoryArena *allocator, int argc, char **argv);
+styx_function Str8 file_working_dir(Str8 filename);
+styx_function Str8 file_base_name(Str8 filename);
+styx_function Str8 file_ext(Str8 filename);
+styx_function Str8 read_file(MemoryArena *allocator, Str8 filename);
+styx_function Str8List arg_list(MemoryArena *allocator, int argc, char **argv);
 
 // djb2 hash function for string hashing.
-u64 djb2_hash(Str8 str);
+styx_function u64 djb2_hash(Str8 str);
 
 #endif

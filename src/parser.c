@@ -1,6 +1,3 @@
-#include "common.h"
-#include "platform.h"
-#include "tokenizer.h"
 #include "parser.h"
 
 SymbolTable

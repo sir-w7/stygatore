@@ -12,5 +12,5 @@ set SRC_FILES=%PLATFORM%\win32_platform.c %SRC%\common.c %SRC%\stygatore.c %SRC%
 
 if not exist build mkdir build
 pushd build
-%COMPILER% %COMPILE_FLAGS% %SRC_FILES% /link /out:stygatore.exe
+%COMPILER% %COMPILE_FLAGS% ..\src\stygatore.c /link /out:stygatore.exe
 popd
