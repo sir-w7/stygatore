@@ -49,4 +49,3 @@ struct @t_name
 
 @Vec2 <- f32: Vec2f
 @Vec2 <- u16: Vec2Coords
-

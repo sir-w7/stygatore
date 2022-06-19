@@ -3,27 +3,28 @@
 
 enum StyxTokenType
 {
-	StyxToken_Unknown,
-	StyxToken_Identifier,
+	Token_Unknown,
+	Token_Identifier,
 	
-	StyxToken_Semicolon,
-	StyxToken_Comma,
+	Token_Semicolon,
+    Token_Colon,
+	Token_Comma,
 	
-	StyxToken_CommentLine,
-	StyxToken_CommentBlock,
-	StyxToken_Whitespace,
+	Token_CommentLine,
+	Token_CommentBlock,
+	Token_Whitespace,
 	
-	StyxToken_ParentheticalOpen,
-	StyxToken_ParentheticalClose,
-	StyxToken_BraceOpen,
-	StyxToken_BraceClose,
+	Token_ParentheticalOpen,
+	Token_ParentheticalClose,
+	Token_BraceOpen,
+	Token_BraceClose,
 	
-	StyxToken_FeedRight,
-	StyxToken_FeedLeft,
+	Token_FeedRight,
+	Token_FeedLeft,
 	
-	StyxToken_TemplateDirective,
+	Token_TemplateDirective,
 	
-	StyxToken_EndOfFile,
+	Token_EndOfFile,
 };
 
 struct StyxToken
@@ -31,7 +32,7 @@ struct StyxToken
 	StyxTokenType type;
 	Str8 str;
 	
-	u32 line;
+	u64 line;
 };
 
 struct StyxTokenizer
@@ -39,6 +40,8 @@ struct StyxTokenizer
 	Str8 file_data;
 	
 	u32 offset;
+    u32 next_offset;
+    
 	u32 line_at;
 };
 

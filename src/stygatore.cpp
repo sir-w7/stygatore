@@ -20,28 +20,32 @@ handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
 	Str8 base_name = file_base_name(file_abspath);
 	Str8 ext = file_ext(file_abspath);
 	
-	println("full path: " str8_fmt, str8_exp(file_abspath));
-	println("working_dir: " str8_fmt, str8_exp(working_dir));
-	println("base_name: " str8_fmt, str8_exp(base_name));
-	println("ext: " str8_fmt, str8_exp(ext));
+	println("file_abspath: " str8_fmt, str8_exp(file_abspath));
+	println("working_dir: "  str8_fmt, str8_exp(working_dir));
+	println("base_name: "    str8_fmt, str8_exp(base_name));
+	println("ext: "          str8_fmt, str8_exp(ext));
 	
-	CompilationSettings settings = {0};
+	CompilationSettings settings{};
 	SymbolTable table = create_symbol_table(temp_allocator);
 	StyxTokenizer tokens = tokenizer_file(temp_allocator, file_abspath);
 	
 	for (StyxToken tok = tokenizer_get_at(&tokens);
-		 tok.type != StyxToken_EndOfFile;
-		 tok = tokenizer_inc_no_whitespace(&tokens)) {
-		print_token(tok);
+		 tok.type != Token_EndOfFile;
+		 tok = tokenizer_inc_all(&tokens)) {
+        for (int i = 0; i < 16; ++i) {
+            tok = tokenizer_get_at(&tokens);
+            print_token(tok);
+        }
         
-		if (tok.type == StyxToken_TemplateDirective) {
+		if (tok.type == Token_TemplateDirective) {
 			if (str8_compare(tok.str, str8_lit("@output"))) {
-				// NOTE(sir->w7): If it is output directive.
 				StyxToken next_tok = tokenizer_inc_no_whitespace(&tokens);
+                print_token(next_tok);
+                
 				settings.output_name = push_str8_copy(temp_allocator, next_tok.str);
 			} else if (str8_compare(tok.str, str8_lit("@template"))) {
 				// NOTE(sir->w7): If it is a template declaration symbol to be hashed.
-				Symbol sym = {0};
+				Symbol sym{};
 			}
 		}
 	}
@@ -63,16 +67,16 @@ handle_dir(MemoryArena *temp_allocator, Str8 dir)
 int main(int argc, char **argv)
 {
 	if (argc == 1) {
-		println("stygatore is a sane, performant metaprogramming tool for\n"
-				"language-agnostic generics with readable diagnostics for maximum\n"
-				"developer productivity.");
+		println("stygatore is a sane, performant metaprogramming tool for language-agnostic generics with readable diagnostics for maximum developer productivity.");
 		printnl();
 		println("Usage: %s [files/directories]", argv[0]);
 	}
 	
 	MemoryArena allocator = init_arena(megabytes(256));
+    defer { free_arena(&allocator); };
 	MemoryArena temp_allocator = init_arena(megabytes(512));
-	
+	defer { free_arena(&temp_allocator); };
+    
 	Str8List args = arg_list(&allocator, argc, argv);
 	for (Str8Node *arg = args.head; arg; arg = arg->next) {
 		arena_reset(&temp_allocator);
@@ -84,7 +88,4 @@ int main(int argc, char **argv)
 			fprintln(stderr, "Argument is neither a file nor a directory.");
 		}
 	}
-	
-	free_arena(&temp_allocator);
-	free_arena(&allocator);
 }

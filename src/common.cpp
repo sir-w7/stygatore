@@ -44,8 +44,8 @@ styx_function void
 memory_set(void *ptr, u32 value, u64 size)
 {
 	char *dest_ptr = (char *)ptr;
-	for (int i = 0; i < size; ++i) {
-		dest_ptr[i] = value;
+	for (u64 i = 0; i < size; ++i) {
+		dest_ptr[i] = (char)value;
 	}
 }
 
@@ -162,7 +162,7 @@ str8_compare(Str8 str1, Str8 str2)
 	if (str1.len != str2.len) 
 		return FALSE;
 	
-	for (int i = 0; i < str1.len; ++i) {
+	for (u64 i = 0; i < str1.len; ++i) {
 		if (str1.str[i] != str2.str[i])
 			return FALSE;
 	}
@@ -196,9 +196,9 @@ styx_function Str8
 file_working_dir(Str8 filename)
 {
 	Str8 working_dir = {filename.str};
-	for (int i = filename.len - 1; i >= 0; --i) {
+	for (int i = static_cast<int>(filename.len - 1); i >= 0; --i) {
 		if (filename.str[i] == '/') {
-			working_dir.len = i + 1;
+			working_dir.len = static_cast<u64>(i + 1);
 			break;
 		}
 	}
@@ -210,11 +210,11 @@ styx_function Str8
 file_base_name(Str8 filename)
 {
 	Str8 base_name = {0};
-	int offset = 0;
+	u64 offset = 0;
 	
-	for (int i = filename.len - 1; i >= 0; --i) {
+	for (int i = static_cast<int>(filename.len - 1); i >= 0; --i) {
 		if (filename.str[i] == '/') {
-			offset = i + 1;
+			offset = static_cast<u64>(i + 1);
 			base_name.str = filename.str + offset;
 			break;
 		}
@@ -222,7 +222,7 @@ file_base_name(Str8 filename)
 	
 	if (offset == 0) base_name.str = filename.str;
 	
-	for (int i = offset; i < filename.len; ++i) {
+	for (u64 i = offset; i < filename.len; ++i) {
 		if (filename.str[i] == '.') {
 			base_name.len = i - offset;
 			break;
@@ -236,7 +236,7 @@ styx_function Str8
 file_ext(Str8 filename)
 {
 	Str8 ext = {0};
-	for (int i = filename.len - 1; i >= 0; --i) {
+	for (int i = static_cast<int>(filename.len - 1); i >= 0; --i) {
 		if (filename.str[i] == '.') {
 			ext.str = filename.str + i + 1;
 			ext.len = filename.len - i - 1;
@@ -250,7 +250,8 @@ styx_function Str8
 read_file(MemoryArena *allocator, Str8 filename)
 {
 	Str8 file_data = {0};
-	FILE *file = fopen(filename.str, "r");
+	FILE *file = {};
+    fopen_s(&file, filename.str, "r");
 	if (!file) {
 		fprintln(stderr, "Failed to open file.");
 	}
@@ -295,5 +296,3 @@ djb2_hash(Str8 str)
 	}
 	return hash;
 }
-
-

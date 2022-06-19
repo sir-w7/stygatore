@@ -6,7 +6,7 @@
 styx_function f64
 get_time()
 {
-	static LARGE_INTEGER performance_frequency = {0};
+	static LARGE_INTEGER performance_frequency = {};
 	if(performance_frequency.QuadPart == 0) 
 		QueryPerformanceFrequency(&performance_frequency);
 	
@@ -52,7 +52,7 @@ get_file_abspath(MemoryArena *allocator, Str8 file_path)
 	u32 len = GetFullPathNameA(file_path.str, 256, buffer, NULL);
 	
 	// NOTE(sir->w7): Change to Unix-style paths (the real standard).
-	for (int i = 0; i < len; ++i) {
+	for (u32 i = 0; i < len; ++i) {
 		if (buffer[i] == '\\') {
 			buffer[i] = '/';
 		}
