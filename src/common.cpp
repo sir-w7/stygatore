@@ -73,7 +73,6 @@ arena_reset(MemoryArena *arena)
 {
 	if (arena == NULL) return;
 	
-	arena->prev_offset = 0;
 	arena->curr_offset = 0;
 }
 
@@ -86,18 +85,30 @@ arena_push_align(MemoryArena *arena, u64 size, u32 align)
 	
 	assert(offset + size <= arena->size);
 	void *ptr = &arena->mem[offset];
-	arena->prev_offset = offset;
 	arena->curr_offset = offset + size;
 	
 	memory_set(ptr, 0, size);
 	return ptr;
 }
 
+styx_function void *
+arena_push_pack(MemoryArena *arena, u64 size)
+{
+    assert(arena->curr_offset + size <= arena->size);
+	void *ptr = &arena->mem[arena->curr_offset];
+    
+	arena->curr_offset += size;
+	
+	memory_set(ptr, 0, size);
+    
+    return ptr;
+}
+
 //- NOTE(sir->w): Temp arena function definitions.
 styx_function TempArena
 begin_temp_arena(MemoryArena *arena)
 {
-	return TempArena{arena, arena->prev_offset, arena->curr_offset};
+	return TempArena{arena, arena->curr_offset};
 }
 
 // NOTE(sir->w): This is assuming no allocations is made on the main arena,
@@ -105,7 +116,6 @@ begin_temp_arena(MemoryArena *arena)
 styx_function void 
 end_temp_arena(TempArena *temp_arena)
 {
-	temp_arena->parent_arena->prev_offset = temp_arena->prev_offset;
 	temp_arena->parent_arena->curr_offset = temp_arena->curr_offset;
 }
 
@@ -289,10 +299,9 @@ styx_function u64
 djb2_hash(Str8 str)
 {
 	u64 hash = 5381;
-	i32 c = 0;
 	
-	while ((c = *str.str++)) {
-		hash = ((hash << 5) + hash) + c;
+    for (u64 i = 0; i < str.len; ++i) {
+		hash = ((hash << 5) + hash) + str.str[i];
 	}
 	return hash;
 }

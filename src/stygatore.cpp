@@ -20,38 +20,36 @@ handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
 	Str8 base_name = file_base_name(file_abspath);
 	Str8 ext = file_ext(file_abspath);
 	
-	println("file_abspath: " str8_fmt, str8_exp(file_abspath));
-	println("working_dir: "  str8_fmt, str8_exp(working_dir));
-	println("base_name: "    str8_fmt, str8_exp(base_name));
-	println("ext: "          str8_fmt, str8_exp(ext));
-	
+#define debugln_str8var(var) println(#var ": " str8_fmt, str8_exp(var))
+    debugln_str8var(file_abspath);
+    debugln_str8var(working_dir);
+    debugln_str8var(base_name);
+    debugln_str8var(ext);
+    
 	CompilationSettings settings{};
-	SymbolTable table = create_symbol_table(temp_allocator);
+	StyxSymbolTable table = create_symbol_table(temp_allocator);
 	StyxTokenizer tokens = tokenizer_file(temp_allocator, file_abspath);
 	
 	for (StyxToken tok = tokenizer_get_at(&tokens);
 		 tok.type != Token_EndOfFile;
-		 tok = tokenizer_inc_all(&tokens)) {
-        for (int i = 0; i < 16; ++i) {
-            tok = tokenizer_get_at(&tokens);
-            print_token(tok);
-        }
-        
-		if (tok.type == Token_TemplateDirective) {
+		 tok = tokenizer_inc_no_whitespace(&tokens)) {
+		if (tok.type == Token_StyxDirective) {
 			if (str8_compare(tok.str, str8_lit("@output"))) {
 				StyxToken next_tok = tokenizer_inc_no_whitespace(&tokens);
-                print_token(next_tok);
-                
 				settings.output_name = push_str8_copy(temp_allocator, next_tok.str);
 			} else if (str8_compare(tok.str, str8_lit("@template"))) {
-				// NOTE(sir->w7): If it is a template declaration symbol to be hashed.
-				Symbol sym{};
+				StyxSymbol sym = parse_symbol(&tokens, temp_allocator);
+                symbol_table_push(&table, temp_allocator, sym);
 			}
 		}
 	}
-	
-	println("Output file: " str8_fmt, str8_exp(settings.output_name));
-	printnl();
+    
+    debugln_str8var(settings.output_name);
+    
+    for (StyxSymbol *ref = table.references.head; ref; ref = ref->next) {
+        printnl();
+        symbol_print(*ref);
+    }
 }
 
 styx_function void

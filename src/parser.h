@@ -1,21 +1,47 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-struct Symbol
+// NOTE(sir->w7): Is runtime polymorphism really necessary here?
+enum StyxSymbolType
 {
-	Str8 str;
-	StyxToken *definition;
-	
-	// TODO(sir->w7): Implement line numbers in the file string.
-	int line_number;
-	
-	Symbol *next;
+    Symbol_Declaration,
+    Symbol_Reference,
 };
 
-struct SymbolTable
+struct StyxSymbol
 {
-	Symbol *syms;
-	
+    StyxSymbolType type;
+    StyxSymbol *next;
+    
+    union {
+        struct {
+            Str8 identifier;
+            u64 line;
+            
+            Str8List args;
+            
+            StyxToken *definition;
+            u64 tok_count;
+        } declaration;
+        struct {
+            Str8 identifier;
+            u64 line;
+            
+            Str8List args;
+            Str8 gen_name;
+        } reference;
+    };
+};
+
+struct StyxSymbolTable
+{
+	StyxSymbol *syms;
+    
+	struct {
+        StyxSymbol *head;
+        StyxSymbol *tail;
+    } references;
+    
 	u32 size;
 	u32 capacity;
 };
@@ -23,7 +49,10 @@ struct SymbolTable
 #define INITIAL_CAPACITY 32
 #define GROWTH_RATE 2
 
-SymbolTable create_symbol_table(MemoryArena *arena);
-void symbol_table_push(SymbolTable *table, MemoryArena *arena, Symbol sym);
+styx_function StyxSymbolTable create_symbol_table(MemoryArena *arena);
+styx_function void symbol_table_push(StyxSymbolTable *table, MemoryArena *arena, StyxSymbol sym);
+styx_function StyxSymbol symbol_table_lookup(StyxSymbolTable *table, Str8 identifier);
+styx_function StyxSymbol parse_symbol(StyxTokenizer *tokens, MemoryArena *arena);
+styx_function void symbol_print(StyxSymbol sym);
 
 #endif

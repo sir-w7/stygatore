@@ -224,12 +224,12 @@ for (int _i_##__LINE__ = ((start), 0);  _i_##__LINE__ == 0; _i_##__LINE__ += 1, 
 //-------------------------------Memory-------------------------------
 #define DEF_ALIGN (2 * sizeof(void *))
 
+// NOTE(sir->w7): prev_offset isn't really used in this codebase since we never really have to resize memory or anything.
 struct MemoryArena
 {
 	u8 *mem;
 	u64 size;
     
-	u64 prev_offset;
 	u64 curr_offset;
 };
 
@@ -243,6 +243,7 @@ styx_function void free_arena(MemoryArena *arena);
 
 styx_function void arena_reset(MemoryArena *arena);
 styx_function void *arena_push_align(MemoryArena *arena, u64 size, u32 align);
+styx_function void *arena_push_pack(MemoryArena *arena, u64 size);
 
 struct TempArena { 
 	MemoryArena *parent_arena;

@@ -22,7 +22,7 @@ enum StyxTokenType
 	Token_FeedRight,
 	Token_FeedLeft,
 	
-	Token_TemplateDirective,
+	Token_StyxDirective,
 	
 	Token_EndOfFile,
 };
@@ -45,12 +45,27 @@ struct StyxTokenizer
 	u32 line_at;
 };
 
-styx_function Str8 str8_get_token(StyxTokenType type, StyxTokenizer *tokens);
+struct StyxTokenizerState
+{
+    u32 offset;
+    u32 next_offset;
+    u32 line_at;
+};
+
+styx_function void token_print(StyxToken token);
+
 styx_function StyxTokenizer tokenizer_file(MemoryArena *allocator, Str8 filename);
 styx_function StyxToken tokenizer_get_at(StyxTokenizer *tokens);
-styx_function void print_token(StyxToken token);
 
 styx_function StyxToken tokenizer_inc_all(StyxTokenizer *tokens);
 styx_function StyxToken tokenizer_inc_no_whitespace(StyxTokenizer *tokens);
+
+styx_function StyxTokenizerState store_tokenizer_state(StyxTokenizer *tokens);
+styx_function void restore_tokenizer_state(StyxTokenizerState state, StyxTokenizer *tokens);
+
+styx_function StyxToken tokenizer_peek_all(StyxTokenizer *tokens);
+styx_function StyxToken tokenizer_peek_no_whitespace(StyxTokenizer *tokens);
+
+styx_function bool known_styx_directive(StyxToken token);
 
 #endif

@@ -70,6 +70,7 @@ get_dir_list_ext(MemoryArena *allocator,
 	WIN32_FIND_DATAA find_data = {0};
 	HANDLE search_handle = {0};
 	
+    // TODO(sir->w7): Is there any way to get a list of all files in the directory without hacking together a path?
 	{
 		// NOTE(sir->w7): Win32 API is pretty dumb, so we need to rework the string while keeping compatibility with Linux.
 		TempArena scratch = begin_temp_arena(allocator);
@@ -97,7 +98,6 @@ get_dir_list_ext(MemoryArena *allocator,
 		// just because it isn't a directory, it doesn't mean that it's a file.
 		if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
 		    str8_compare(file_ext(filename), ext)) {
-			// TODO(sir->w7): For loop-based defer macro to simplify this interface.
 			Str8 file_rel = {0};
 			
             {
