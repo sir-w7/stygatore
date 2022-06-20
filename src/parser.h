@@ -18,7 +18,7 @@ struct StyxSymbol
             Str8 identifier;
             u64 line;
             
-            Str8List args;
+            Str8List params;
             
             StyxToken *definition;
             u64 tok_count;

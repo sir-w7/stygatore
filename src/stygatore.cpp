@@ -20,7 +20,6 @@ handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
 	Str8 base_name = file_base_name(file_abspath);
 	Str8 ext = file_ext(file_abspath);
 	
-#define debugln_str8var(var) println(#var ": " str8_fmt, str8_exp(var))
     debugln_str8var(file_abspath);
     debugln_str8var(working_dir);
     debugln_str8var(base_name);
@@ -53,12 +52,16 @@ handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
 }
 
 styx_function void
-handle_dir(MemoryArena *temp_allocator, Str8 dir)
+handle_dir(MemoryArena *allocator, MemoryArena *temp_allocator,
+           Str8 dir)
 {
-	Str8List files = get_dir_list_ext(temp_allocator, dir, str8_lit(STYX_EXT));
+	Str8List files = get_dir_list_ext(allocator, dir, str8_lit(STYX_EXT));
 	
 	for (Str8Node *file = files.head; file; file = file->next) {
+        arena_reset(temp_allocator);
 		handle_file(temp_allocator, file->data);
+        printnl();
+        printnl();
 	}
 }
 
@@ -81,7 +84,7 @@ int main(int argc, char **argv)
 		if (is_file(arg->data)) {
 			handle_file(&temp_allocator, arg->data);
 		} else if (is_dir(arg->data)) {
-			handle_dir(&temp_allocator, arg->data);
+			handle_dir(&allocator, &temp_allocator, arg->data);
 		} else {
 			fprintln(stderr, "Argument is neither a file nor a directory.");
 		}

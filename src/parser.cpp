@@ -77,10 +77,10 @@ parse_symbol_declaration(StyxTokenizer *tokens, MemoryArena *arena,
             if (tok.type == Token_Comma) {
                 continue;
             }
-            str8list_push(&sym.declaration.args, arena, tok.str);
+            str8list_push(&sym.declaration.params, arena, tok.str);
         }
     } else {
-        str8list_push(&sym.declaration.args, arena, tok.str);
+        str8list_push(&sym.declaration.params, arena, tok.str);
     }
     
     // NOTE(sir->w7): Eat all whitespace
@@ -120,6 +120,18 @@ parse_symbol_reference(StyxTokenizer *tokens, MemoryArena *arena,
     sym.reference.identifier = tok_identifier;
     sym.reference.line = tok_line;
     
+    auto tok = tokenizer_inc_no_whitespace(tokens);
+    while ((tok = tokenizer_inc_no_whitespace(tokens)).type != 
+           Token_Colon) {
+        if (tok.type == Token_Comma) {
+            continue;
+        }
+        str8list_push(&sym.reference.args, arena, tok.str);
+    }
+    
+    tok = tokenizer_inc_no_whitespace(tokens);
+    sym.reference.gen_name = tok.str;
+    
     return sym;
 }
 
@@ -151,8 +163,8 @@ symbol_print(StyxSymbol sym)
         println("sym.type: Symbol_Declaration");
         println("sym.str: " str8_fmt, str8_exp(sym.declaration.identifier));
         println("sym.line: %d", sym.declaration.line);
-        for (Str8Node *arg = sym.declaration.args.head; arg; arg = arg->next) {
-            println("sym.args: " str8_fmt, str8_exp(arg->data));
+        for (Str8Node *param = sym.declaration.params.head; param; param = param->next) {
+            debugln_str8var(param->data);
         }
         
         println("sym.definition:");
@@ -163,5 +175,10 @@ symbol_print(StyxSymbol sym)
         println("sym.type: Symbol_Reference");
         println("sym.str: " str8_fmt, str8_exp(sym.reference.identifier));
         println("sym.line: %d", sym.reference.line);
+        for (Str8Node *arg = sym.reference.args.head; arg; arg = arg->next) {
+            debugln_str8var(arg->data);
+        }
+        
+        debugln_str8var(sym.reference.gen_name);
     }
 }

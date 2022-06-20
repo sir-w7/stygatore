@@ -206,6 +206,8 @@ struct ExitScopeHelp {
 
 #define printnl() printf("\n")
 
+#define debugln_str8var(var) println(#var ": " str8_fmt, str8_exp(var))
+
 //--------------------------------------------------------------------
 //--------------------------Basic Utilities---------------------------
 //--------------------------------------------------------------------
@@ -247,7 +249,6 @@ styx_function void *arena_push_pack(MemoryArena *arena, u64 size);
 
 struct TempArena { 
 	MemoryArena *parent_arena;
-	u64 prev_offset;
 	u64 curr_offset;
 };
 
