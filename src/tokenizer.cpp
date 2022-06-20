@@ -198,6 +198,19 @@ tokenizer_inc_no_whitespace(StyxTokenizer *tokens)
 	return tok;
 }
 
+styx_function StyxToken 
+tokenizer_inc_no_comment(StyxTokenizer *tokens)
+{
+    StyxToken tok = tokenizer_inc_all(tokens);
+	while (tok.type != Token_EndOfFile) {
+		if (tok.type != Token_CommentLine && tok.type != Token_CommentBlock) {
+			break;
+		}
+		tok = tokenizer_inc_all(tokens);
+	}
+	return tok;
+}
+
 styx_function Str8
 str8_token_type(StyxTokenType type)
 {

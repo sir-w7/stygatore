@@ -59,6 +59,7 @@ styx_function StyxToken tokenizer_get_at(StyxTokenizer *tokens);
 
 styx_function StyxToken tokenizer_inc_all(StyxTokenizer *tokens);
 styx_function StyxToken tokenizer_inc_no_whitespace(StyxTokenizer *tokens);
+styx_function StyxToken tokenizer_inc_no_comment(StyxTokenizerState *tokens);
 
 styx_function StyxTokenizerState store_tokenizer_state(StyxTokenizer *tokens);
 styx_function void restore_tokenizer_state(StyxTokenizerState state, StyxTokenizer *tokens);

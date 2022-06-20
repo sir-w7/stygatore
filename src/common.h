@@ -293,6 +293,8 @@ struct Str8List
 {
 	Str8Node *head;
 	Str8Node *tail;
+    
+    u64 count;
 };
 
 styx_function void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);

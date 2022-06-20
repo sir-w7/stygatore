@@ -186,6 +186,7 @@ styx_function void
 str8list_push(Str8List *list, 
               MemoryArena *allocator, Str8 str) 
 {
+    list->count++;
 	if (list->head == NULL) {
 		list->head = arena_push_struct(allocator, Str8Node);
 		list->head->data = push_str8_copy(allocator, str);
@@ -214,6 +215,25 @@ file_working_dir(Str8 filename)
 	}
 	
 	return working_dir;
+}
+
+styx_function Str8
+file_name(Str8 file_path)
+{
+    Str8 filename{};
+    u32 offset = 0;
+    
+    for (int i = static_cast<int>(file_path.len - 1); i >= 0; --i) {
+		if (file_path.str[i] == '/') {
+			offset = static_cast<u64>(i + 1);
+			filename.str = file_path.str + offset;
+			break;
+		}
+	}
+    
+    filename.len = file_path.len - offset;
+    
+    return filename;
 }
 
 styx_function Str8

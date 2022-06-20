@@ -27,7 +27,7 @@ struct @t_name
 	@T z;
 };
 
-static inline @t_name @func_name(T x, T y, T z)
+static inline @t_name @func_name(@T x, @T y, @T z)
 {
 	return (@t_name){.x = x, .y = y, .z = z};
 }
