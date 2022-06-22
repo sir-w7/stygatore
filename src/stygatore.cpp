@@ -5,7 +5,6 @@
 
 #define STYX_EXT "styxgen"
 
-typedef struct CompilationSettings CompilationSettings;
 struct CompilationSettings
 {
 	Str8 output_name;
