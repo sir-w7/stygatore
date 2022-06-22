@@ -3,7 +3,12 @@
 #include <stdint.h>
 
 #include "common.h"
-#include "win32/win32_platform.cpp"
+
+#if STYX_OS_WINDOWS
+	#include "win32/win32_platform.cpp"
+#elif STYX_OS_LINUX
+	#include "linux/linux_platform.cpp"
+#endif
 
 styx_inline b32
 is_power_of_two(uintptr_t x) 
@@ -280,8 +285,7 @@ styx_function Str8
 read_file(MemoryArena *allocator, Str8 filename)
 {
 	Str8 file_data = {0};
-	FILE *file = {};
-    fopen_s(&file, filename.str, "r");
+	auto file = fopen(filename.str, "r");
 	if (!file) {
 		fprintln(stderr, "Failed to open file.");
 	}

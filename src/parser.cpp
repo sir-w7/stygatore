@@ -161,7 +161,7 @@ symbol_print(StyxSymbol sym)
     if (sym.type == Symbol_Declaration) {
         println("sym.type: Symbol_Declaration");
         println("sym.str: " str8_fmt, str8_exp(sym.declaration.identifier));
-        println("sym.line: %d", sym.declaration.line);
+        println("sym.line: %lu", sym.declaration.line);
         for (Str8Node *param = sym.declaration.params.head; param; param = param->next) {
             debugln_str8var(param->data);
         }
@@ -173,7 +173,7 @@ symbol_print(StyxSymbol sym)
     } else {
         println("sym.type: Symbol_Reference");
         println("sym.str: " str8_fmt, str8_exp(sym.reference.identifier));
-        println("sym.line: %d", sym.reference.line);
+        println("sym.line: %lu", sym.reference.line);
         for (Str8Node *arg = sym.reference.args.head; arg; arg = arg->next) {
             debugln_str8var(arg->data);
         }

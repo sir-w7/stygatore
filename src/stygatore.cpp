@@ -62,8 +62,7 @@ handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
     
     auto output_filename = push_str8_concat(temp_allocator, working_dir, settings.output_name);
     
-    FILE *file{};
-    fopen_s(&file, output_filename.str, "w");
+    auto file = fopen(output_filename.str, "w");
     defer { fclose(file); };
     
     insert_comment(file, file_ext(settings.output_name), 

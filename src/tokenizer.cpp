@@ -285,7 +285,7 @@ token_print(StyxToken tok)
     
     printf("  ");
     
-    printf("tok.line: %d", tok.line);
+    printf("tok.line: %lu", tok.line);
 	printnl();
 }
 

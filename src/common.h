@@ -168,20 +168,20 @@ typedef u64 b64;
 #if STYX_LANG_CPP
 // NOTE(sir->w7): Stolen from Jon Blow.
 
-template<typename T>
+template <typename T>
 struct ExitScope {
     T lambda;
-    ExitScope(T lambda) : lambda(lambda){}
+    ExitScope(T lambda) : lambda(lambda) {}
     ~ExitScope() { lambda(); }
-    ExitScope(const ExitScope&);
+    //ExitScope(const ExitScope&);
     
     private:
-    ExitScope& operator =(const ExitScope&);
+    	ExitScope& operator=(const ExitScope&);
 };
 
 struct ExitScopeHelp {
-    template<typename T>
-        ExitScope<T> operator+(T t){ return t;}
+    template <typename T>
+    ExitScope<T> operator+(T t){ return t; }
 };
 
 #define defer const auto& concat(defer__, __COUNTER__) = ExitScopeHelp() + [&]()
@@ -221,7 +221,7 @@ struct ExitScopeHelp {
 #endif 
 
 #define defer_block(start, end) \
-for (int _i_##__LINE__ = ((start), 0);  _i_##__LINE__ == 0; _i_##__LINE__ += 1, (end))
+  for (int _i_##__LINE__ = ((start), 0);  _i_##__LINE__ == 0; _i_##__LINE__ += 1, (end))
 
 //-------------------------------Memory-------------------------------
 #define DEF_ALIGN (2 * sizeof(void *))
@@ -247,7 +247,8 @@ styx_function void arena_reset(MemoryArena *arena);
 styx_function void *arena_push_align(MemoryArena *arena, u64 size, u32 align);
 styx_function void *arena_push_pack(MemoryArena *arena, u64 size);
 
-struct TempArena { 
+struct TempArena
+{ 
 	MemoryArena *parent_arena;
 	u64 curr_offset;
 };
@@ -265,7 +266,6 @@ styx_function void end_temp_arena(TempArena *temp_arena);
 #define temp_arena_push(temp, size) arena_push(temp->parent_arena, size)
 
 //-------------------------------String-------------------------------
-typedef struct Str8 Str8;
 struct Str8
 {
 	char *str;
@@ -281,14 +281,12 @@ styx_function Str8 push_str8_concat(MemoryArena *allocator, Str8 init, Str8 add)
 // Returns true if the strings are the same, false if they are different.
 styx_function b32 str8_compare(Str8 str1, Str8 str2);
 
-typedef struct Str8Node Str8Node;
 struct Str8Node
 {
 	Str8 data;
 	Str8Node *next;
 };
 
-typedef struct Str8List Str8List;
 struct Str8List
 {
 	Str8Node *head;
@@ -299,7 +297,7 @@ struct Str8List
 
 styx_function void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);
 
-#define str8_lit(string) (Str8{string, sizeof(string) - 1})
+#define str8_lit(string) (Str8{(char *)string, sizeof(string) - 1})
 #define str8_exp(string) string.len ? (int)string.len : 4, string.len ? string.str : "null"
 #define str8_fmt "%.*s"
 

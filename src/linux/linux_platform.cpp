@@ -20,7 +20,7 @@ get_time()
 	struct timespec time_spec_thing = {0};
 	clock_gettime(CLOCK_REALTIME, &time_spec_thing);
 	float seconds_elapsed = ((f64)time_spec_thing.tv_nsec / (f64)1e9);
-	return seconds_elapsed;
+	return seconds_elapsed * 1000.0f;
 }
 
 styx_inline void *
@@ -65,30 +65,22 @@ get_dir_list_ext(MemoryArena *allocator,
 {
 	Str8List dir_file_list = {0};
     
-	DIR *dir = opendir(dir_path.str);	
+	auto dir = opendir(dir_path.str);	
 	if (dir == NULL) {
 		fprintln(stderr, "Not a directory. opendir failed.");
 		return dir_file_list;
 	}
-    
+	defer { closedir(dir); };
+	    
 	struct dirent *dir_entry = NULL;
 	while ((dir_entry = readdir(dir)) != NULL) {
 		Str8 filename = str8_from_cstr(dir_entry->d_name);
-		if (dir_entry->d_type == DT_REG &&
-			str8_compare(file_ext(filename), ext)) {
-			// For loop-based defer macro to simplify this interface.
-			TempArena scratch = begin_temp_arena(allocator); 
-			
-			Str8 file_rel = push_str8_concat(allocator, dir_path, str8_lit("/"));
-			file_rel = push_str8_concat(allocator, file_rel, filename);
-            
-			end_temp_arena(&scratch);
-            
-			Str8 file_path = get_file_abspath(allocator, file_rel);
-			str8list_push(&dir_file_list, allocator, file_path);
+		if (dir_entry->d_type == DT_REG && str8_compare(file_ext(filename), ext)) {
+			auto file_rel = push_str8_concat(allocator, dir_path, str8_lit("/"));
+			file_rel = push_str8_concat(allocator, file_rel, filename);            
+			str8list_push(&dir_file_list, allocator, file_rel);
 		}
 	}
-	closedir(dir);
     
 	return dir_file_list;
 }
