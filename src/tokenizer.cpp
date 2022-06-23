@@ -1,212 +1,6 @@
 #include "common.h"
 #include "tokenizer.h"
 
-styx_inline void
-tokenizer_token_inc_comment_line(StyxTokenizer *tokens)
-{
-	while (tokens->next_offset++ < tokens->file_data.len &&
-	       tokens->file_data.str[tokens->next_offset] != '\n');
-}
-
-styx_inline void
-tokenizer_token_inc_comment_block(StyxTokenizer *tokens)
-{
-	// Increment the tokenizer past the block comment open.
-	tokens->next_offset++;
-	while ((tokens->next_offset++ < tokens->file_data.len)) {
-        if (tokens->file_data.str[tokens->next_offset] == '\n') {
-            tokens->line_at++;
-        }
-        
-		if (tokens->file_data.str[tokens->next_offset] == '*' &&
-		    tokens->file_data.str[++tokens->next_offset] == '/') {
-			break;
-        }
-	}
-	// NOTE(sir->w7): The tokenizer works by calculating to the string's end to the character before the offset. Therefore, this is to maintain compatibility with the other increment functions.
-	tokens->next_offset++;
-}
-
-styx_inline void
-tokenizer_token_inc_whitespace(StyxTokenizer *tokens)
-{
-	static char whitespaces[] = {
-		' ', '\n', '\r', '\t',
-	};
-    
-    if (tokens->file_data.str[tokens->next_offset] == '\n') {
-        tokens->line_at++;
-    }
-    
-	// Used to do cool pointer increment while loop thing:
-	// The classic sir->w7, but changed to other because more readable.
-	while (tokens->next_offset++ < tokens->file_data.len) {
-		for (int i = 0; i < array_count(whitespaces); ++i) {
-			char whitespace = whitespaces[i];
-			if (tokens->file_data.str[tokens->next_offset] != whitespace)
-				return;
-		}
-	}
-    
-    if (tokens->file_data.str[tokens->next_offset] == '\n') {
-        tokens->line_at++;
-    }
-}
-// a b c
-// 0 1 2
-
-// len: 3
-styx_inline void
-tokenizer_token_inc_def(StyxTokenizer *tokens)
-{
-	// Delimiter is likely not even the right term for this.
-	static char delimiters[] = {
-		' ', '\n', '\r', '\t',
-		'(', ')', '{', '}', 
-		';', ':', ',',
-	};
-    
-	while (tokens->next_offset++ < tokens->file_data.len) {
-		for (int i = 0; i < array_count(delimiters); ++i) {
-			char delimiter = delimiters[i];
-			if (tokens->file_data.str[tokens->next_offset] == delimiter) {
-				return;
-			}
-		}
-	}
-}
-
-static Str8
-str8_get_token(StyxTokenType type, StyxTokenizer *tokens)
-{
-	if (type == Token_EndOfFile) return Str8{};
-	
-	Str8 result;
-	tokens->next_offset = tokens->offset;
-	result.str = tokens->file_data.str + tokens->offset;
-	
-	switch (type) {
-		case Token_Whitespace: { tokenizer_token_inc_whitespace(tokens); } break;
-		case Token_CommentLine: { tokenizer_token_inc_comment_line(tokens); } break;
-		case Token_CommentBlock: { tokenizer_token_inc_comment_block(tokens); } break;
-		
-		case Token_BraceOpen:
-		case Token_BraceClose:
-		case Token_ParentheticalOpen:
-		case Token_ParentheticalClose: { tokens->next_offset++; } break;
-		
-		default: { tokenizer_token_inc_def(tokens); } break;
-	}
-	
-	result.len = tokens->next_offset - tokens->offset;
-	
-	return result;
-}
-
-StyxTokenizer tokenizer_file(MemoryArena *allocator, Str8 filename)
-{
-	StyxTokenizer tokens{};
-	
-	tokens.file_data = read_file(allocator, filename);
-	tokens.line_at = 1;
-	
-	return tokens;
-}
-
-static char
-tokenizer_peek_next_ch(StyxTokenizer *tokens)
-{
-	return tokens->file_data.str[tokens->offset + 1];
-}
-
-StyxToken tokenizer_get_at(StyxTokenizer *tokens)
-{
-	StyxToken tok{};
-	
-    tok.line = tokens->line_at;
-	switch (tokens->file_data.str[tokens->offset]) {
-        case '\0': { tok.type = Token_EndOfFile; } break;
-        case '@': { tok.type = Token_StyxDirective; } break;
-		
-        case ' ':
-        case '\t':
-		case '\r': 
-        case '\n': { tok.type = Token_Whitespace; } break;
-		
-		case '/': {
-			if (tokenizer_peek_next_ch(tokens) == '/') {
-				tok.type = Token_CommentLine;
-			} else if (tokenizer_peek_next_ch(tokens) == '*') {
-				tok.type = Token_CommentBlock;
-			}
-		} break;
-		
-        case ';': { tok.type = Token_Semicolon; } break;
-        case ':': { tok.type = Token_Colon; } break;
-		case ',': { tok.type = Token_Comma; } break;
-		
-        case '{': { tok.type = Token_BraceOpen; } break;
-        case '}': { tok.type = Token_BraceClose; } break;
-        case '(': { tok.type = Token_ParentheticalOpen; } break;
-        case ')': { tok.type = Token_ParentheticalClose; } break;
-		
-        case '<': {
-			if (tokenizer_peek_next_ch(tokens) == '-') {
-				tok.type = Token_FeedLeft;
-			}
-        } break;
-        case '-': {
-			if (tokenizer_peek_next_ch(tokens) == '>') { 
-				tok.type = Token_FeedRight;
-			}
-        } break;
-		
-        default: { tok.type = Token_Identifier; } break;
-	};
-	
-    if (tokens->next_offset > tokens->offset) {
-        tok.str = Str8{
-            tokens->file_data.str + tokens->offset,
-            tokens->next_offset - tokens->offset,
-        };
-    } else {
-        tok.str = str8_get_token(tok.type, tokens);
-    }
-    
-	return tok;
-}
-
-StyxToken tokenizer_inc_all(StyxTokenizer *tokens)
-{
-    StyxToken result{};
-	tokens->offset = tokens->next_offset;
-	return tokenizer_get_at(tokens);
-}
-
-StyxToken tokenizer_inc_no_whitespace(StyxTokenizer *tokens)
-{
-	StyxToken tok = tokenizer_inc_all(tokens);
-	while (tok.type != Token_EndOfFile) {
-		if (tok.type != Token_Whitespace && tok.type != Token_CommentLine && tok.type != Token_CommentBlock) {
-			break;
-		}
-		tok = tokenizer_inc_all(tokens);
-	}
-	return tok;
-}
-
-StyxToken tokenizer_inc_no_comment(StyxTokenizer *tokens)
-{
-    StyxToken tok = tokenizer_inc_all(tokens);
-	while (tok.type != Token_EndOfFile) {
-		if (tok.type != Token_CommentLine && tok.type != Token_CommentBlock) {
-			break;
-		}
-		tok = tokenizer_inc_all(tokens);
-	}
-	return tok;
-}
-
 static Str8
 str8_token_type(StyxTokenType type)
 {
@@ -239,24 +33,24 @@ str8_token_type(StyxTokenType type)
 	return token_type_str[type];
 }
 
-void token_print(StyxToken tok)
+void StyxToken::print()
 {
-	printf("tok.type: %-24.*s  ", str8_exp(str8_token_type(tok.type)));
+	printf("type: %-24.*s  ", str8_exp(str8_token_type(type)));
     
-    printf("tok.str: ");
+    printf("str: ");
     
 #define PRINT_MAX 32
-    if (tok.str.len < PRINT_MAX) {
+    if (str.len < PRINT_MAX) {
         u32 count = 0;
-        for (u64 i = 0; i < tok.str.len; ++i) {
-            if (tok.str.str[i] == '\t') {
+        for (u64 i = 0; i < str.len; ++i) {
+            if (str.str[i] == '\t') {
                 printf("\\t");
                 count += 2;
-            } else if (tok.str.str[i] == '\n') {
+            } else if (str.str[i] == '\n') {
                 printf("\\n");
                 count += 2;
             } else {
-                printf("%c", tok.str.str[i]);
+                printf("%c", str.str[i]);
                 count++;
             }
         }
@@ -266,12 +60,12 @@ void token_print(StyxToken tok)
         }
     } else {
         for (u64 i = 0; i < PRINT_MAX - 3; ++i) {
-            if (tok.str.str[i] == '\t') {
+            if (str.str[i] == '\t') {
                 printf("\\t");
-            } else if (tok.str.str[i] == '\n') {
+            } else if (str.str[i] == '\n') {
                 printf("\\n");
             } else {
-                printf("%c", tok.str.str[i]);
+                printf("%c", str.str[i]);
             }
         }
         
@@ -280,8 +74,207 @@ void token_print(StyxToken tok)
     
     printf("  ");
     
-    printf("tok.line: %llu", tok.line);
+    printf("line: %llu", line);
 	printnl();
+}
+
+bool StyxToken::known_styx_directive()
+{
+    static const Str8 known_directives[] = {
+        str8_lit("@output"),
+        str8_lit("@template"),
+    };
+    
+    for (auto str : known_directives) {
+        if (str8_compare(str, this->str))
+            return true;
+    }
+    
+    return false;
+}
+
+inline void
+StyxTokenizer::token_inc_comment_line()
+{
+	while (next_offset++ < file_data.len && 
+	       file_data.str[next_offset] != '\n');
+}
+
+inline void
+StyxTokenizer::token_inc_comment_block()
+{
+	// Increment the tokenizer past the block comment open.
+	next_offset++;
+	while (next_offset++ < file_data.len) {
+        if (file_data.str[next_offset] == '\n') {
+            line_at++;
+        }
+        
+		if (file_data.str[next_offset] == '*' &&
+		    file_data.str[++next_offset] == '/') {
+			break;
+        }
+	}
+	// NOTE(sir->w7): The tokenizer works by calculating to the string's end to the character before the offset. Therefore, this is to maintain compatibility with the other increment functions.
+	next_offset++;
+}
+
+inline void
+StyxTokenizer::token_inc_whitespace()
+{
+	static char whitespaces[] = {
+		' ', '\n', '\r', '\t',
+	};
+    
+    if (file_data.str[next_offset] == '\n') {
+        line_at++;
+    }
+    
+	// Used to do cool pointer increment while loop thing:
+	// The classic sir->w7, but changed to other because more readable.
+	while (next_offset++ < file_data.len) {
+		for (int i = 0; i < array_count(whitespaces); ++i) {
+			char whitespace = whitespaces[i];
+			if (file_data.str[next_offset] != whitespace)
+				return;
+		}
+	}
+    
+    if (file_data.str[next_offset] == '\n')
+        line_at++;
+}
+
+inline void
+StyxTokenizer::token_inc_def()
+{
+	// Delimiter is likely not even the right term for this.
+	static char delimiters[] = {
+		' ', '\n', '\r', '\t',
+		'(', ')', '{', '}', 
+		';', ':', ',',
+	};
+    
+	while (next_offset++ < file_data.len) {
+		for (int i = 0; i < array_count(delimiters); ++i) {
+			char delimiter = delimiters[i];
+			if (file_data.str[next_offset] == delimiter) {
+				return;
+			}
+		}
+	}
+}
+
+Str8 StyxTokenizer::get_token(StyxTokenType type)
+{
+	Str8 result{};
+
+	if (type == Token_EndOfFile) return result;
+	
+	next_offset = offset;
+	result.str = file_data.str + offset;
+	
+	switch (type) {
+		case Token_Whitespace: { token_inc_whitespace(); } break;
+		case Token_CommentLine: { token_inc_comment_line(); } break;
+		case Token_CommentBlock: { token_inc_comment_block(); } break;
+		
+		case Token_BraceOpen:
+		case Token_BraceClose:
+		case Token_ParentheticalOpen:
+		case Token_ParentheticalClose: { next_offset++; } break;
+		
+		default: { token_inc_def(); } break;
+	}
+	
+	result.len = next_offset - offset;
+	
+	return result;
+}
+
+StyxToken StyxTokenizer::get_at()
+{
+	StyxToken tok{};
+	
+    tok.line = line_at;
+	switch (file_data.str[offset]) {
+        case '\0': { tok.type = Token_EndOfFile; } break;
+        case '@': { tok.type = Token_StyxDirective; } break;
+		
+        case ' ':
+        case '\t':
+		case '\r': 
+        case '\n': { tok.type = Token_Whitespace; } break;
+		
+		case '/': {
+			if (file_data.str[offset + 1] == '/') {
+				tok.type = Token_CommentLine;
+			} else if (file_data.str[offset + 1] == '*') {
+				tok.type = Token_CommentBlock;
+			}
+		} break;
+		
+        case ';': { tok.type = Token_Semicolon; } break;
+        case ':': { tok.type = Token_Colon; } break;
+		case ',': { tok.type = Token_Comma; } break;
+		
+        case '{': { tok.type = Token_BraceOpen; } break;
+        case '}': { tok.type = Token_BraceClose; } break;
+        case '(': { tok.type = Token_ParentheticalOpen; } break;
+        case ')': { tok.type = Token_ParentheticalClose; } break;
+		
+        case '<': {
+			if (file_data.str[offset + 1] == '-') {
+				tok.type = Token_FeedLeft;
+			}
+        } break;
+        case '-': {
+			if (file_data.str[offset + 1] == '>') { 
+				tok.type = Token_FeedRight;
+			}
+        } break;
+		
+        default: { tok.type = Token_Identifier; } break;
+	};
+	
+    if (next_offset > offset) {
+        tok.str = Str8(file_data.str + offset,
+                       next_offset - offset);
+    } else {
+        tok.str = get_token(tok.type);
+    }
+    
+	return tok;
+}
+
+StyxToken StyxTokenizer::inc_all()
+{
+    StyxToken result{};
+	offset = next_offset;
+	return get_at();
+}
+
+StyxToken StyxTokenizer::inc_no_whitespace()
+{
+	auto tok = inc_all();
+	while (tok.type != Token_EndOfFile) {
+		if (tok.type != Token_Whitespace && tok.type != Token_CommentLine && tok.type != Token_CommentBlock) {
+			break;
+		}
+		tok = inc_all();
+	}
+	return tok;
+}
+
+StyxToken StyxTokenizer::inc_no_comment()
+{
+    auto tok = inc_all();
+	while (tok.type != Token_EndOfFile) {
+		if (tok.type != Token_CommentLine && tok.type != Token_CommentBlock) {
+			break;
+		}
+		tok = inc_all();
+	}
+	return tok;
 }
 
 StyxTokenizerState store_tokenizer_state(StyxTokenizer *tokens)
@@ -298,36 +291,3 @@ void restore_tokenizer_state(StyxTokenizerState state, StyxTokenizer *tokens)
     tokens->line_at = state.line_at;
 }
 
-StyxToken tokenizer_peek_all(StyxTokenizer *tokens)
-{
-    auto state = store_tokenizer_state(tokens);
-    defer { restore_tokenizer_state(state, tokens); };
-    
-    auto token = tokenizer_inc_all(tokens);
-    return token;
-}
-
-StyxToken tokenizer_peek_no_whitespace(StyxTokenizer *tokens)
-{
-    auto state = store_tokenizer_state(tokens);
-    defer { restore_tokenizer_state(state, tokens); };
-    
-    auto token = tokenizer_inc_no_whitespace(tokens);
-    return token;
-}
-
-bool known_styx_directive(StyxToken token)
-{
-    static const Str8 known_directives[] = {
-        str8_lit("@output"),
-        str8_lit("@template"),
-    };
-    
-    for (auto str : known_directives) {
-        if (str8_compare(str, token.str)) {
-            return true;
-        }
-    }
-    
-    return false;
-}

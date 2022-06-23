@@ -36,16 +36,16 @@ void handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
 	
 	CompilationSettings settings{};
 	auto table = create_symbol_table(temp_allocator);
-	auto tokens = tokenizer_file(temp_allocator, file_abspath);
+	StyxTokenizer tokens(temp_allocator, file_abspath);
 	
     auto time_start = get_time();
     
-    for (auto tok = tokenizer_get_at(&tokens);
+    for (auto tok = tokens.get_at();
          tok.type != Token_EndOfFile;
-         tok = tokenizer_inc_no_whitespace(&tokens)) {
+         tok = tokens.inc_no_whitespace()) {
         if (tok.type == Token_StyxDirective) {
             if (str8_compare(tok.str, str8_lit("@output"))) {
-                auto next_tok = tokenizer_inc_no_whitespace(&tokens);
+                auto next_tok = tokens.inc_no_whitespace();
                 settings.output_name = Str8(temp_allocator, next_tok.str);
             } else if (str8_compare(tok.str, str8_lit("@template"))) {
                 auto sym = parse_symbol(&tokens, temp_allocator);

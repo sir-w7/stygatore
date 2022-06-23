@@ -68,30 +68,30 @@ parse_symbol_declaration(StyxTokenizer *tokens, MemoryArena *arena,
     sym.declaration.identifier = tok_identifier;
     sym.declaration.line = tok_line;
     
-    auto tok = tokenizer_inc_no_whitespace(tokens);
+    auto tok = tokens->inc_no_whitespace();
     if (tok.type == Token_ParentheticalOpen) {
-        while ((tok = tokenizer_inc_no_whitespace(tokens)).type != 
+        while ((tok = tokens->inc_no_whitespace()).type != 
                Token_ParentheticalClose) {
             if (tok.type == Token_Comma) {
                 continue;
             }
-            str8list_push(&sym.declaration.params, arena, tok.str);
+            sym.declaration.params.push(arena, tok.str);
         }
     } else {
-        str8list_push(&sym.declaration.params, arena, tok.str);
+        sym.declaration.params.push(arena, tok.str);
     }
     
     // NOTE(sir->w7): Eat all whitespace
     //while ((tok = tokenizer_inc_all(tokens)).type == Token_Whitespace);
-    tok = tokenizer_inc_no_whitespace(tokens);
+    tok = tokens->inc_no_whitespace();
     // TODO(sir->w7): This is a very small penis expandable array implementation. Don't ever do this again, and don't leave this here when shipping.
     sym.declaration.definition =
         reinterpret_cast<StyxToken *>(arena->mem + arena->offset);
     
     // TODO(sir->w7): Some decrement tokenizer feature so we don't need to do restore the tokenizer state to set it up for an increment;
     auto prev_state = store_tokenizer_state(tokens);
-    for (; !known_styx_directive(tok) && tok.type != Token_EndOfFile;
-         tok = tokenizer_inc_no_comment(tokens)) {
+    for (; !tok.known_styx_directive() && tok.type != Token_EndOfFile;
+         tok = tokens->inc_no_comment()) {
         StyxToken *tok_ptr = (StyxToken *)arena->push_pack(sizeof(StyxToken));
         *tok_ptr = tok;
         sym.declaration.tok_count++;
@@ -119,15 +119,15 @@ parse_symbol_reference(StyxTokenizer *tokens, MemoryArena *arena,
     sym.reference.identifier = tok_identifier;
     sym.reference.line = tok_line;
     
-    auto tok = tokenizer_inc_no_whitespace(tokens);
+    auto tok = tokens->inc_no_whitespace();
     do {
         if (tok.type == Token_Comma) {
             continue;
         } 
-        str8list_push(&sym.reference.args, arena, tok.str);
-    } while ((tok = tokenizer_inc_no_whitespace(tokens)).type != Token_Colon);
+        sym.reference.args.push(arena, tok.str);
+    } while ((tok = tokens->inc_no_whitespace()).type != Token_Colon);
     
-    tok = tokenizer_inc_no_whitespace(tokens);
+    tok = tokens->inc_no_whitespace();
     sym.reference.gen_name = tok.str;
     
     return sym;
@@ -135,12 +135,12 @@ parse_symbol_reference(StyxTokenizer *tokens, MemoryArena *arena,
 
 StyxSymbol parse_symbol(StyxTokenizer *tokens, MemoryArena *arena)
 {
-    auto tok = tokenizer_inc_no_whitespace(tokens);
+    auto tok = tokens->inc_no_whitespace();
     
     auto tok_identifier = tok.str;
     auto tok_line = tok.line;
     
-    tok = tokenizer_inc_no_whitespace(tokens);
+    tok = tokens->inc_no_whitespace();
     if (tok.type == Token_FeedLeft) {
         return parse_symbol_declaration(tokens, arena, tok_identifier, tok_line);
     } else {
@@ -165,7 +165,7 @@ void symbol_print(StyxSymbol sym)
         
         println("sym.definition:");
         for (u64 i = 0; i < sym.declaration.tok_count; ++i) {
-            token_print(sym.declaration.definition[i]);
+            sym.declaration.definition[i].print();
         }
     } else {
         println("sym.type: Symbol_Reference");

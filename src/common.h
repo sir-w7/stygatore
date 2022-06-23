@@ -291,12 +291,12 @@ struct Str8List
 	Str8Node *tail;
     
     u64 count;
+
+    void push(MemoryArena *arena, Str8 str);
 };
 
 #define str8list_it(var, list) \
     for (auto var = list.head; var; var = var->next)
-
-void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);
 
 #define str8_lit(string) (Str8((char *)string, sizeof(string) - 1))
 #define str8_exp(string) string.len ? (int)string.len : 4, string.len ? string.str : "null"
@@ -311,6 +311,7 @@ Str8 file_name(Str8 file_path);
 Str8 file_base_name(Str8 filename);
 Str8 file_ext(Str8 filename);
 Str8 read_file(MemoryArena *allocator, Str8 filename);
+
 Str8List arg_list(MemoryArena *allocator, int argc, char **argv);
 
 // djb2 hash function for string hashing.

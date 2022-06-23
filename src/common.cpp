@@ -141,23 +141,22 @@ b32 str8_compare(Str8 str1, Str8 str2)
 // If str is already dynamically allocated, this still creates another copy of 
 // str. Perhaps we can add a flag to str to specify if it's a stack literal vs. 
 // a dynamically allocated string to save memory.
-void str8list_push(Str8List *list, 
-                   MemoryArena *allocator, Str8 str) 
+void Str8List::push(MemoryArena *allocator, Str8 str)
 {
-    list->count++;
-	if (list->head == NULL) {
-		list->head = (Str8Node *)allocator->push(sizeof(Str8Node));
-		list->head->data = Str8(allocator, str);
-		
-		list->tail = list->head;
+	count++;
+	if (head == nullptr) {
+		head = (Str8Node *)allocator->push(sizeof(Str8Node));
+		head->data = Str8(allocator, str);
+
+		tail = head;
 		return;
 	}
-	
-	Str8Node *new_node = (Str8Node *)allocator->push(sizeof(Str8Node));
+
+	auto new_node = (Str8Node *)allocator->push(sizeof(Str8Node));
 	new_node->data = Str8(allocator, str);
-	
-	list->tail->next = new_node;
-	list->tail = new_node;
+
+	tail->next = new_node;
+	tail = new_node;
 }
 
 // File and string utilities.
@@ -257,11 +256,11 @@ Str8 read_file(MemoryArena *allocator, Str8 filename)
 Str8List arg_list(MemoryArena *allocator, 
                   int argc, char **argv)
 {
-	Str8List args = {0};
+	Str8List args{};
 	
 	// Starts at 1 to skip the command.
 	for (int i = 1; i < argc; ++i) {
-		str8list_push(&args, allocator, str8_from_cstr(argv[i]));
+		args.push(allocator, str8_from_cstr(argv[i]));
 	}
 	
 	return args;
