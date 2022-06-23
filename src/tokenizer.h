@@ -52,21 +52,23 @@ struct StyxTokenizerState
     u32 line_at;
 };
 
-styx_function void token_print(StyxToken token);
+void token_print(StyxToken token);
 
-styx_function StyxTokenizer tokenizer_file(MemoryArena *allocator, Str8 filename);
-styx_function StyxToken tokenizer_get_at(StyxTokenizer *tokens);
+StyxTokenizer tokenizer_file(MemoryArena *allocator, Str8 filename);
+StyxToken tokenizer_get_at(StyxTokenizer *tokens);
 
-styx_function StyxToken tokenizer_inc_all(StyxTokenizer *tokens);
-styx_function StyxToken tokenizer_inc_no_whitespace(StyxTokenizer *tokens);
-styx_function StyxToken tokenizer_inc_no_comment(StyxTokenizerState *tokens);
+StyxToken tokenizer_inc_all(StyxTokenizer *tokens);
+StyxToken tokenizer_inc_no_whitespace(StyxTokenizer *tokens);
+StyxToken tokenizer_inc_no_comment(StyxTokenizer *tokens);
 
-styx_function StyxTokenizerState store_tokenizer_state(StyxTokenizer *tokens);
-styx_function void restore_tokenizer_state(StyxTokenizerState state, StyxTokenizer *tokens);
+void token_print(StyxToken tok);
 
-styx_function StyxToken tokenizer_peek_all(StyxTokenizer *tokens);
-styx_function StyxToken tokenizer_peek_no_whitespace(StyxTokenizer *tokens);
+StyxTokenizerState store_tokenizer_state(StyxTokenizer *tokens);
+void restore_tokenizer_state(StyxTokenizerState state, StyxTokenizer *tokens);
 
-styx_function bool known_styx_directive(StyxToken token);
+StyxToken tokenizer_peek_all(StyxTokenizer *tokens);
+StyxToken tokenizer_peek_no_whitespace(StyxTokenizer *tokens);
+
+bool known_styx_directive(StyxToken token);
 
 #endif

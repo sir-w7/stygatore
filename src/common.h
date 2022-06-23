@@ -11,7 +11,7 @@
 # if defined(_WIN32)
 #  define STYX_OS_WINDOWS 1
 # else
-#  error Unknown OS.
+#  error "Unknown OS."
 # endif
 
 # if defined(_M_AMD64)
@@ -21,7 +21,7 @@
 # elif defined(_M_AMD64)
 #  define STYX_ARCH_ARM
 # else
-#  error Unknown arch.
+#  error "Unknown arch."
 # endif
 
 #elif defined(__clang__)
@@ -34,7 +34,7 @@
 # elif defined(__APPLE__) && defined(__MACH__)
 #  define STYX_OS_MAC 1
 # else
-#  error Unknown OS.
+#  error "Unknown OS."
 # endif
 
 # if defined(__amd64__)
@@ -44,7 +44,7 @@
 # elif defined(__arm__)
 #  define STYX_ARCH_ARM 1
 # else
-#  error Unknown arch.
+#  error "Unknown arch."
 # endif
 
 #elif defined(__GNUC__)
@@ -57,7 +57,7 @@
 # elif defined(__APPLE__) && defined(__MACH__)
 #  define STYX_OS_MAC 1
 # else
-#  error Unknown OS.
+#  error "Unknown OS."
 # endif
 
 # if defined(__amd64__)
@@ -67,11 +67,11 @@
 # elif defined(__arm__)
 #  define STYX_ARCH_ARM
 # else
-#  error Unknown arch.
+#  error "Unknown arch."
 # endif
 
 #else
-# error Unknown compiler.
+# error "Unknown compiler."
 #endif
 
 #if defined(__cplusplus)
@@ -221,10 +221,15 @@ struct ExitScopeHelp {
 #endif 
 
 #define defer_block(start, end) \
-  for (int _i_##__LINE__ = ((start), 0);  _i_##__LINE__ == 0; _i_##__LINE__ += 1, (end))
+    for (int _i_##__LINE__ = ((start), 0);  _i_##__LINE__ == 0; _i_##__LINE__ += 1, (end))
 
 //-------------------------------Memory-------------------------------
 #define DEF_ALIGN (2 * sizeof(void *))
+
+uintptr_t align_forth(uintptr_t ptr, u32 align);
+
+void memory_copy(void* dest, void* src, u64 size);
+void memory_set(void* ptr, u32 value, u64 size);
 
 // NOTE(sir->w7): prev_offset isn't really used in this codebase since we never really have to resize memory or anything.
 struct MemoryArena
@@ -232,54 +237,47 @@ struct MemoryArena
 	u8 *mem;
 	u64 size;
     
-	u64 curr_offset;
+	u64 offset;
+
+    MemoryArena(u64 size);
+    ~MemoryArena();
+
+    void reset();
+    void *push_align(u64 size, u32 align);
+    void *push_pack(u64 size);
+
+    void *push(u64 size) { return push_align(size, DEF_ALIGN); }
+    void *push_array(u64 size, u64 count) { return push(size * count); }
 };
-
-styx_function uintptr_t align_forth(uintptr_t ptr, u32 align);
-
-styx_function void memory_copy(void *dest, void *src, u64 size);
-styx_function void memory_set(void *ptr, u32 value, u64 size);
-
-styx_function MemoryArena init_arena(u64 size);
-styx_function void free_arena(MemoryArena *arena);
-
-styx_function void arena_reset(MemoryArena *arena);
-styx_function void *arena_push_align(MemoryArena *arena, u64 size, u32 align);
-styx_function void *arena_push_pack(MemoryArena *arena, u64 size);
 
 struct TempArena
 { 
 	MemoryArena *parent_arena;
-	u64 curr_offset;
+	u64 offset;
+
+    TempArena(MemoryArena *parent) :
+        parent_arena(parent), offset(parent->offset) {}
+    ~TempArena() { parent_arena->offset = offset; }
 };
-
-styx_function TempArena begin_temp_arena(MemoryArena *arena);
-styx_function void end_temp_arena(TempArena *temp_arena);
-
-#define arena_push(arena, size) arena_push_align(arena, size, DEF_ALIGN)
-#define arena_push_array(arena, size, count) arena_push(arena, size * count)
-#define arena_push_struct_array(arena, structure, count) \
-(structure *)arena_push(arena, sizeof(structure) * count)
-#define arena_push_struct(arena, structure) (structure *)arena_push(arena, sizeof(structure))
-
-#define temp_arena_push_align(temp, size, align) arena_push_align(temp->parent_arena, size, align)
-#define temp_arena_push(temp, size) arena_push(temp->parent_arena, size)
 
 //-------------------------------String-------------------------------
 struct Str8
 {
 	char *str;
 	u64 len;
+
+    Str8() : str(nullptr), len(0) {}
+    Str8(char *cstr, u64 len) : str(cstr), len(len) {}
+    Str8(MemoryArena *allocator, char *cstr, u64 len);
+    Str8(MemoryArena *allocator, Str8 str);
 };
 
-styx_function u64 cstr_len(char *cstr);
+u64 cstr_len(char *cstr);
 
-styx_function Str8 push_str8(MemoryArena *allocator, u8 *cstr, u64 len);
-styx_function Str8 push_str8_copy(MemoryArena *allocator, Str8 str);
-styx_function Str8 push_str8_concat(MemoryArena *allocator, Str8 init, Str8 add);
+Str8 push_str8_concat(MemoryArena *allocator, Str8 init, Str8 add);
 
 // Returns true if the strings are the same, false if they are different.
-styx_function b32 str8_compare(Str8 str1, Str8 str2);
+b32 str8_compare(Str8 str1, Str8 str2);
 
 struct Str8Node
 {
@@ -295,23 +293,27 @@ struct Str8List
     u64 count;
 };
 
-styx_function void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);
+#define str8list_it(var, list) \
+    for (auto var = list.head; var; var = var->next)
 
-#define str8_lit(string) (Str8{(char *)string, sizeof(string) - 1})
+void str8list_push(Str8List *list, MemoryArena *allocator, Str8 str);
+
+#define str8_lit(string) (Str8((char *)string, sizeof(string) - 1))
 #define str8_exp(string) string.len ? (int)string.len : 4, string.len ? string.str : "null"
 #define str8_fmt "%.*s"
 
-#define str8_from_cstr(cstr) (Str8{cstr, cstr_len(cstr)})
+#define str8_from_cstr(cstr) (Str8(cstr, cstr_len(cstr)))
 #define str8_is_nil(string) (string.len == 0)
 
 // File and string utilities.
-styx_function Str8 file_working_dir(Str8 filename);
-styx_function Str8 file_base_name(Str8 filename);
-styx_function Str8 file_ext(Str8 filename);
-styx_function Str8 read_file(MemoryArena *allocator, Str8 filename);
-styx_function Str8List arg_list(MemoryArena *allocator, int argc, char **argv);
+Str8 file_working_dir(Str8 filename);
+Str8 file_name(Str8 file_path);
+Str8 file_base_name(Str8 filename);
+Str8 file_ext(Str8 filename);
+Str8 read_file(MemoryArena *allocator, Str8 filename);
+Str8List arg_list(MemoryArena *allocator, int argc, char **argv);
 
 // djb2 hash function for string hashing.
-styx_function u64 djb2_hash(Str8 str);
+u64 djb2_hash(Str8 str);
 
 #endif

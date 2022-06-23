@@ -3,21 +3,14 @@
 #include <stdint.h>
 
 #include "common.h"
+#include "platform.h"
 
-#if STYX_OS_WINDOWS
-	#include "win32/win32_platform.cpp"
-#elif STYX_OS_LINUX
-	#include "linux/linux_platform.cpp"
-#endif
-
-styx_inline b32
-is_power_of_two(uintptr_t x) 
+b32 is_power_of_two(uintptr_t x) 
 {
 	return (x & (x - 1)) == 0;
 }
 
-styx_function uintptr_t 
-align_forth(uintptr_t ptr, u32 align)
+uintptr_t align_forth(uintptr_t ptr, u32 align)
 {
 	assert(is_power_of_two(align));
 	uintptr_t p = ptr;
@@ -34,8 +27,7 @@ align_forth(uintptr_t ptr, u32 align)
 
 // Basic memory function implementations that we need so we don't
 // need to import all of string.h.
-styx_function void 
-memory_copy(void *dest, void *src, u64 size)
+void memory_copy(void *dest, void *src, u64 size)
 {
 	char *dest_ptr = (char *)dest;
 	char *src_ptr = (char *)src;
@@ -45,8 +37,7 @@ memory_copy(void *dest, void *src, u64 size)
 	}
 }
 
-styx_function void
-memory_set(void *ptr, u32 value, u64 size)
+void memory_set(void *ptr, u32 value, u64 size)
 {
 	char *dest_ptr = (char *)ptr;
 	for (u64 i = 0; i < size; ++i) {
@@ -54,116 +45,80 @@ memory_set(void *ptr, u32 value, u64 size)
 	}
 }
 
-styx_function MemoryArena 
-init_arena(u64 size)
+MemoryArena::MemoryArena(u64 size)
 {
 	assert(size);
-	
-	MemoryArena arena = {0};
-	arena.mem = (u8 *)reserve_mem(size);
-	arena.size = size;
-	
-	return arena;
+	mem = static_cast<u8 *>(reserve_mem(size));
+	this->size = size;
+    offset = 0;
 }
 
-styx_function void 
-free_arena(MemoryArena *arena)
+MemoryArena::~MemoryArena()
 {
-	free_mem(arena->mem, arena->size);
-	*arena = MemoryArena{};
+	free_mem(mem, size);
+    // NOTE(sir->w): Should we zero out the struct as well?
 }
 
-styx_function void
-arena_reset(MemoryArena *arena)
+void MemoryArena::reset()
 {
-	if (arena == NULL) return;
-	
-	arena->curr_offset = 0;
+    offset = 0;
 }
 
-styx_function void *
-arena_push_align(MemoryArena *arena, u64 size, u32 align)
+void *MemoryArena::push_align(u64 size, u32 align)
 {
-	uintptr_t curr_ptr = (uintptr_t)arena->mem + (uintptr_t)arena->curr_offset;
+	uintptr_t curr_ptr = (uintptr_t)mem + (uintptr_t)offset;
 	uintptr_t offset = align_forth(curr_ptr, align);
-	offset -= (uintptr_t)arena->mem;
+	offset -= (uintptr_t)mem;
 	
-	assert(offset + size <= arena->size);
-	void *ptr = &arena->mem[offset];
-	arena->curr_offset = offset + size;
+	assert(offset + size <= this->size);
+	void *ptr = &mem[offset];
+	this->offset = offset + size;
 	
 	memory_set(ptr, 0, size);
-	return ptr;
+
+    return ptr;    
 }
 
-styx_function void *
-arena_push_pack(MemoryArena *arena, u64 size)
+void *MemoryArena::push_pack(u64 size)
 {
-    assert(arena->curr_offset + size <= arena->size);
-	void *ptr = &arena->mem[arena->curr_offset];
-    
-	arena->curr_offset += size;
+    assert(offset + size <= this->size);
+	void *ptr = &mem[offset];
+	offset += size;
 	
 	memory_set(ptr, 0, size);
     
     return ptr;
 }
 
-//- NOTE(sir->w): Temp arena function definitions.
-styx_function TempArena
-begin_temp_arena(MemoryArena *arena)
-{
-	return TempArena{arena, arena->curr_offset};
-}
-
-// NOTE(sir->w): This is assuming no allocations is made on the main arena,
-// which is a pretty far-fetched supposition. 
-styx_function void 
-end_temp_arena(TempArena *temp_arena)
-{
-	temp_arena->parent_arena->curr_offset = temp_arena->curr_offset;
-}
-
 //-------------------------------String-------------------------------
-styx_function u64 
-cstr_len(char *cstr)
+Str8::Str8(MemoryArena *allocator, char* cstr, u64 len)
+{
+	this->len = len;
+	str = (char *)allocator->push(len + 1);
+    memory_copy(str, cstr, len + 1);
+}
+
+Str8::Str8(MemoryArena *allocator, Str8 str)
+{
+    len = str.len;
+    this->str = (char *)allocator->push(len);
+    memory_copy(this->str, str.str, len);
+}
+
+u64 cstr_len(char *cstr)
 {
 	u64 len = 0;
 	while (cstr[len++] != '\0');
 	return len - 1;
 }
 
-styx_function Str8
-push_str8(MemoryArena *allocator, u8 *cstr, u64 len)
-{
-	Str8 str = {0};
-	str.len = len;
-	str.str = (char *)arena_push(allocator, len + 1);
-	
-	memory_copy(str.str, cstr, len + 1);
-	
-	return str;
-}
-
-styx_function Str8 
-push_str8_copy(MemoryArena *allocator, Str8 str)
-{
-	Str8 new_str = {0};
-	new_str.len = str.len;
-	new_str.str = (char *)arena_push(allocator, new_str.len);
-	memory_copy(new_str.str, str.str, new_str.len);
-	
-	return new_str;
-}
-
-styx_function Str8 
-push_str8_concat(MemoryArena *allocator, 
+Str8 push_str8_concat(MemoryArena *allocator, 
                  Str8 init, Str8 add)
 {
-	Str8 new_str = {0};
+	Str8 new_str;
 	
 	new_str.len = init.len + add.len; 
-	new_str.str = (char *)arena_push_array(allocator, sizeof(u8), new_str.len);
+	new_str.str = (char *)allocator->push_array(sizeof(u8), new_str.len);
 	memory_copy(new_str.str, init.str, init.len);
 	memory_copy(new_str.str + init.len, add.str, add.len);
 	new_str.str[new_str.len] = '\0';
@@ -171,8 +126,7 @@ push_str8_concat(MemoryArena *allocator,
 	return new_str;
 }
 
-styx_function b32 
-str8_compare(Str8 str1, Str8 str2)
+b32 str8_compare(Str8 str1, Str8 str2)
 {
 	if (str1.len != str2.len) 
 		return FALSE;
@@ -187,31 +141,30 @@ str8_compare(Str8 str1, Str8 str2)
 // If str is already dynamically allocated, this still creates another copy of 
 // str. Perhaps we can add a flag to str to specify if it's a stack literal vs. 
 // a dynamically allocated string to save memory.
-styx_function void 
-str8list_push(Str8List *list, 
-              MemoryArena *allocator, Str8 str) 
+void str8list_push(Str8List *list, 
+                   MemoryArena *allocator, Str8 str) 
 {
     list->count++;
 	if (list->head == NULL) {
-		list->head = arena_push_struct(allocator, Str8Node);
-		list->head->data = push_str8_copy(allocator, str);
+		list->head = (Str8Node *)allocator->push(sizeof(Str8Node));
+		list->head->data = Str8(allocator, str);
 		
 		list->tail = list->head;
 		return;
 	}
 	
-	Str8Node *new_node = arena_push_struct(allocator, Str8Node);
-	new_node->data = push_str8_copy(allocator, str);
+	Str8Node *new_node = (Str8Node *)allocator->push(sizeof(Str8Node));
+	new_node->data = Str8(allocator, str);
 	
 	list->tail->next = new_node;
 	list->tail = new_node;
 }
 
 // File and string utilities.
-styx_function Str8
-file_working_dir(Str8 filename)
+Str8 file_working_dir(Str8 filename)
 {
-	Str8 working_dir = {filename.str};
+	Str8 working_dir;
+	working_dir.str = filename.str;
 	for (int i = static_cast<int>(filename.len - 1); i >= 0; --i) {
 		if (filename.str[i] == '/') {
 			working_dir.len = static_cast<u64>(i + 1);
@@ -222,8 +175,7 @@ file_working_dir(Str8 filename)
 	return working_dir;
 }
 
-styx_function Str8
-file_name(Str8 file_path)
+Str8 file_name(Str8 file_path)
 {
     Str8 filename{};
     u32 offset = 0;
@@ -241,10 +193,9 @@ file_name(Str8 file_path)
     return filename;
 }
 
-styx_function Str8
-file_base_name(Str8 filename)
+Str8 file_base_name(Str8 filename)
 {
-	Str8 base_name = {0};
+	Str8 base_name;
 	u64 offset = 0;
 	
 	for (int i = static_cast<int>(filename.len - 1); i >= 0; --i) {
@@ -267,10 +218,9 @@ file_base_name(Str8 filename)
 	return base_name;
 }
 
-styx_function Str8
-file_ext(Str8 filename)
+Str8 file_ext(Str8 filename)
 {
-	Str8 ext = {0};
+	Str8 ext;
 	for (int i = static_cast<int>(filename.len - 1); i >= 0; --i) {
 		if (filename.str[i] == '.') {
 			ext.str = filename.str + i + 1;
@@ -281,13 +231,13 @@ file_ext(Str8 filename)
 	return ext;
 }
 
-styx_function Str8 
-read_file(MemoryArena *allocator, Str8 filename)
+Str8 read_file(MemoryArena *allocator, Str8 filename)
 {
-	Str8 file_data = {0};
+	Str8 file_data;
 	auto file = fopen(filename.str, "r");
-	if (!file) {
+	if (file == NULL) {
 		fprintln(stderr, "Failed to open file.");
+		return file_data;
 	}
 	
 	u64 file_size = 0;
@@ -295,7 +245,7 @@ read_file(MemoryArena *allocator, Str8 filename)
 	file_size = (u64)ftell(file);
 	fseek(file, 0, SEEK_SET);
 	
-	file_data.str = (char *)arena_push(allocator, file_size + 1);
+	file_data.str = static_cast<char *>(allocator->push(file_size + 1));
 	file_data.len = file_size;
 	
 	fread(file_data.str, file_size, 1, file);
@@ -304,9 +254,8 @@ read_file(MemoryArena *allocator, Str8 filename)
 	return file_data;
 }
 
-styx_function Str8List 
-arg_list(MemoryArena *allocator, 
-         int argc, char **argv)
+Str8List arg_list(MemoryArena *allocator, 
+                  int argc, char **argv)
 {
 	Str8List args = {0};
 	
@@ -319,8 +268,7 @@ arg_list(MemoryArena *allocator,
 }
 
 // djb2 hash function for string hashing.
-styx_function u64
-djb2_hash(Str8 str)
+u64 djb2_hash(Str8 str)
 {
 	u64 hash = 5381;
 	

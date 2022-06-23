@@ -49,10 +49,10 @@ struct StyxSymbolTable
 #define INITIAL_CAPACITY 32
 #define GROWTH_RATE 2
 
-styx_function StyxSymbolTable create_symbol_table(MemoryArena *arena);
-styx_function void symbol_table_push(StyxSymbolTable *table, MemoryArena *arena, StyxSymbol sym);
-styx_function StyxSymbol symbol_table_lookup(StyxSymbolTable *table, Str8 identifier);
-styx_function StyxSymbol parse_symbol(StyxTokenizer *tokens, MemoryArena *arena);
-styx_function void symbol_print(StyxSymbol sym);
+StyxSymbolTable create_symbol_table(MemoryArena *arena);
+void symbol_table_push(StyxSymbolTable *table, MemoryArena *arena, StyxSymbol sym);
+StyxSymbol symbol_table_lookup(StyxSymbolTable *table, Str8 identifier);
+StyxSymbol parse_symbol(StyxTokenizer *tokens, MemoryArena *arena);
+void symbol_print(StyxSymbol sym);
 
 #endif

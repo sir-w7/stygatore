@@ -1,3 +1,4 @@
+#include "common.h"
 #include "tokenizer.h"
 
 styx_inline void
@@ -75,12 +76,12 @@ tokenizer_token_inc_def(StyxTokenizer *tokens)
 	}
 }
 
-styx_function Str8
+static Str8
 str8_get_token(StyxTokenType type, StyxTokenizer *tokens)
 {
 	if (type == Token_EndOfFile) return Str8{};
 	
-	Str8 result = {0};
+	Str8 result;
 	tokens->next_offset = tokens->offset;
 	result.str = tokens->file_data.str + tokens->offset;
 	
@@ -102,8 +103,7 @@ str8_get_token(StyxTokenType type, StyxTokenizer *tokens)
 	return result;
 }
 
-styx_function StyxTokenizer
-tokenizer_file(MemoryArena *allocator, Str8 filename)
+StyxTokenizer tokenizer_file(MemoryArena *allocator, Str8 filename)
 {
 	StyxTokenizer tokens{};
 	
@@ -113,14 +113,13 @@ tokenizer_file(MemoryArena *allocator, Str8 filename)
 	return tokens;
 }
 
-styx_inline char
+static char
 tokenizer_peek_next_ch(StyxTokenizer *tokens)
 {
 	return tokens->file_data.str[tokens->offset + 1];
 }
 
-styx_function StyxToken
-tokenizer_get_at(StyxTokenizer *tokens)
+StyxToken tokenizer_get_at(StyxTokenizer *tokens)
 {
 	StyxToken tok{};
 	
@@ -177,16 +176,14 @@ tokenizer_get_at(StyxTokenizer *tokens)
 	return tok;
 }
 
-styx_function StyxToken
-tokenizer_inc_all(StyxTokenizer *tokens)
+StyxToken tokenizer_inc_all(StyxTokenizer *tokens)
 {
     StyxToken result{};
 	tokens->offset = tokens->next_offset;
 	return tokenizer_get_at(tokens);
 }
 
-styx_function StyxToken 
-tokenizer_inc_no_whitespace(StyxTokenizer *tokens)
+StyxToken tokenizer_inc_no_whitespace(StyxTokenizer *tokens)
 {
 	StyxToken tok = tokenizer_inc_all(tokens);
 	while (tok.type != Token_EndOfFile) {
@@ -198,8 +195,7 @@ tokenizer_inc_no_whitespace(StyxTokenizer *tokens)
 	return tok;
 }
 
-styx_function StyxToken 
-tokenizer_inc_no_comment(StyxTokenizer *tokens)
+StyxToken tokenizer_inc_no_comment(StyxTokenizer *tokens)
 {
     StyxToken tok = tokenizer_inc_all(tokens);
 	while (tok.type != Token_EndOfFile) {
@@ -211,7 +207,7 @@ tokenizer_inc_no_comment(StyxTokenizer *tokens)
 	return tok;
 }
 
-styx_function Str8
+static Str8
 str8_token_type(StyxTokenType type)
 {
 	// NOTE(sir->w7): Initializer is not a constant bullcrap, but this is really only a debug function, so it does not matter.
@@ -243,8 +239,7 @@ str8_token_type(StyxTokenType type)
 	return token_type_str[type];
 }
 
-styx_function void
-token_print(StyxToken tok)
+void token_print(StyxToken tok)
 {
 	printf("tok.type: %-24.*s  ", str8_exp(str8_token_type(tok.type)));
     
@@ -285,28 +280,25 @@ token_print(StyxToken tok)
     
     printf("  ");
     
-    printf("tok.line: %lu", tok.line);
+    printf("tok.line: %llu", tok.line);
 	printnl();
 }
 
-styx_function StyxTokenizerState
-store_tokenizer_state(StyxTokenizer *tokens)
+StyxTokenizerState store_tokenizer_state(StyxTokenizer *tokens)
 {
     return StyxTokenizerState{
         tokens->offset, tokens->next_offset, tokens->line_at,
     };
 }
 
-styx_function void
-restore_tokenizer_state(StyxTokenizerState state, StyxTokenizer *tokens)
+void restore_tokenizer_state(StyxTokenizerState state, StyxTokenizer *tokens)
 {
     tokens->offset = state.offset;
     tokens->next_offset = state.next_offset;
     tokens->line_at = state.line_at;
 }
 
-styx_function StyxToken 
-tokenizer_peek_all(StyxTokenizer *tokens)
+StyxToken tokenizer_peek_all(StyxTokenizer *tokens)
 {
     auto state = store_tokenizer_state(tokens);
     defer { restore_tokenizer_state(state, tokens); };
@@ -315,8 +307,7 @@ tokenizer_peek_all(StyxTokenizer *tokens)
     return token;
 }
 
-styx_function StyxToken 
-tokenizer_peek_no_whitespace(StyxTokenizer *tokens)
+StyxToken tokenizer_peek_no_whitespace(StyxTokenizer *tokens)
 {
     auto state = store_tokenizer_state(tokens);
     defer { restore_tokenizer_state(state, tokens); };
@@ -325,8 +316,7 @@ tokenizer_peek_no_whitespace(StyxTokenizer *tokens)
     return token;
 }
 
-styx_function bool
-known_styx_directive(StyxToken token)
+bool known_styx_directive(StyxToken token)
 {
     static const Str8 known_directives[] = {
         str8_lit("@output"),
