@@ -68,14 +68,22 @@ private:
 
 struct StyxTokenizerState
 {
+	StyxTokenizer *tokens;
+
     u32 offset;
     u32 next_offset;
     u32 line_at;
+
+    StyxTokenizerState(StyxTokenizer *tokens) :
+    	tokens(tokens),
+    	offset(tokens->offset), 
+    	next_offset(tokens->next_offset),
+    	line_at(tokens->line_at) {}
+    ~StyxTokenizerState() {
+    	tokens->offset = offset;
+	    tokens->next_offset = next_offset;
+	    tokens->line_at = line_at;
+    }
 };
-
-StyxTokenizerState store_tokenizer_state(StyxTokenizer *tokens);
-void restore_tokenizer_state(StyxTokenizerState state, StyxTokenizer *tokens);
-
-bool known_styx_directive(StyxToken token);
 
 #endif

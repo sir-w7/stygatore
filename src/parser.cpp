@@ -2,71 +2,57 @@
 #include "tokenizer.h"
 #include "parser.h"
 
-StyxSymbolTable create_symbol_table(MemoryArena *allocator)
-{
-	StyxSymbolTable table = {0};
-	
-	table.capacity = INITIAL_CAPACITY;
-    table.syms = static_cast<StyxSymbol *>(allocator->push_array(sizeof(StyxSymbol), table.capacity));
-	return table;
-}
-
-
-void symbol_table_push(StyxSymbolTable *table, 
-                  MemoryArena *arena, StyxSymbol sym)
+void StyxSymbolTable::push(MemoryArena *allocator, StyxSymbol sym)
 {
     if (sym.type == Symbol_Declaration) {
-        u64 bucket = djb2_hash(sym.declaration.identifier);
-        u64 idx = bucket % table->capacity;
+        auto bucket = djb2_hash(sym.declaration.identifier);
+        auto idx = bucket % capacity;
         
-        if (str8_is_nil(table->syms[idx].declaration.identifier)) {
-            table->syms[idx] = sym;
-            table->size++;
+        if (str8_is_nil(syms[idx].declaration.identifier)) {
+            syms[idx] = sym;
+            size++;
             return;
         }
         
-        StyxSymbol *sym_new = (StyxSymbol *)arena->push(sizeof(StyxSymbol));
+        StyxSymbol *sym_new = (StyxSymbol *)allocator->push(sizeof(StyxSymbol));
         
-        StyxSymbol *tail = &table->syms[idx];
+        StyxSymbol *tail = &syms[idx];
         while (tail->next != NULL) tail = tail->next;
         
         tail->next = sym_new;
-        table->size++;
+        size++;
     } else {
-        if (table->references.head == nullptr) {
-            table->references.head = (StyxSymbol *)arena->push(sizeof(StyxSymbol));
-            *table->references.head = sym;
-            table->references.tail = table->references.head;
+        if (references.head == nullptr) {
+            references.head = (StyxSymbol *)allocator->push(sizeof(StyxSymbol));
+            *references.head = sym;
+            references.tail = references.head;
             return;
         }
         
-        auto new_node = (StyxSymbol *)arena->push(sizeof(StyxSymbol));
+        auto new_node = (StyxSymbol *)allocator->push(sizeof(StyxSymbol));
         *new_node = sym;
         
-        table->references.tail->next = new_node;
-        table->references.tail = new_node;
+        references.tail->next = new_node;
+        references.tail = new_node;
     }
 }
 
-StyxSymbol symbol_table_lookup(StyxSymbolTable *table, Str8 identifier)
+StyxSymbol StyxSymbolTable::lookup(Str8 identifier)
 {
     auto bucket = djb2_hash(identifier);
-    auto idx = bucket % table->capacity;
+    auto idx = bucket % capacity;
     
     // TODO(sir->w7): Account for collisions.
-    return table->syms[idx];
+    return syms[idx];
 }
 
 // TODO(sir->w7): Parsing error processing.
-static StyxSymbol
-parse_symbol_declaration(StyxTokenizer *tokens, MemoryArena *arena,
-                         Str8 tok_identifier, u64 tok_line)
+void StyxSymbol::parse_declaration(StyxTokenizer *tokens, MemoryArena *allocator,
+                                   Str8 tok_identifier, u64 tok_line)
 {
-    StyxSymbol sym{};
-    
-    sym.type = Symbol_Declaration;
-    sym.declaration.identifier = tok_identifier;
-    sym.declaration.line = tok_line;
+    this->type = Symbol_Declaration;
+    this->declaration.identifier = tok_identifier;
+    this->declaration.line = tok_line;
     
     auto tok = tokens->inc_no_whitespace();
     if (tok.type == Token_ParentheticalOpen) {
@@ -75,66 +61,61 @@ parse_symbol_declaration(StyxTokenizer *tokens, MemoryArena *arena,
             if (tok.type == Token_Comma) {
                 continue;
             }
-            sym.declaration.params.push(arena, tok.str);
+            this->declaration.params.push(allocator, tok.str);
         }
     } else {
-        sym.declaration.params.push(arena, tok.str);
+        this->declaration.params.push(allocator, tok.str);
     }
     
     // NOTE(sir->w7): Eat all whitespace
     //while ((tok = tokenizer_inc_all(tokens)).type == Token_Whitespace);
     tok = tokens->inc_no_whitespace();
     // TODO(sir->w7): This is a very small penis expandable array implementation. Don't ever do this again, and don't leave this here when shipping.
-    sym.declaration.definition =
-        reinterpret_cast<StyxToken *>(arena->mem + arena->offset);
+    this->declaration.definition =
+        reinterpret_cast<StyxToken *>(allocator->mem + allocator->offset);
     
     // TODO(sir->w7): Some decrement tokenizer feature so we don't need to do restore the tokenizer state to set it up for an increment;
-    auto prev_state = store_tokenizer_state(tokens);
+    StyxTokenizerState prev_state(tokens);
     for (; !tok.known_styx_directive() && tok.type != Token_EndOfFile;
          tok = tokens->inc_no_comment()) {
-        StyxToken *tok_ptr = (StyxToken *)arena->push_pack(sizeof(StyxToken));
+        StyxToken *tok_ptr = (StyxToken *)allocator->push_pack(sizeof(StyxToken));
         *tok_ptr = tok;
-        sym.declaration.tok_count++;
-        prev_state = store_tokenizer_state(tokens);
+        this->declaration.tok_count++;
+        prev_state = StyxTokenizerState(tokens);
     }
     
     // NOTE(sir->w7): Eat all whitespace at the end.
-    for (auto i = sym.declaration.tok_count - 1;
-         sym.declaration.definition[i].type == Token_Whitespace;
+    for (auto i = this->declaration.tok_count - 1;
+         this->declaration.definition[i].type == Token_Whitespace;
          --i) {
-        sym.declaration.tok_count--;
+        this->declaration.tok_count--;
     }
-    
-    restore_tokenizer_state(prev_state, tokens);
-    
-    return sym;
 }
 
-static StyxSymbol
-parse_symbol_reference(StyxTokenizer *tokens, MemoryArena *arena,
-                       Str8 tok_identifier, u64 tok_line)
+void StyxSymbol::parse_reference(StyxTokenizer *tokens, MemoryArena *arena,
+                                 Str8 tok_identifier, u64 tok_line)
 {
-    StyxSymbol sym{};
-    sym.type = Symbol_Reference;
-    sym.reference.identifier = tok_identifier;
-    sym.reference.line = tok_line;
+    this->type = Symbol_Reference;
+    this->reference.identifier = tok_identifier;
+    this->reference.line = tok_line;
     
     auto tok = tokens->inc_no_whitespace();
     do {
         if (tok.type == Token_Comma) {
             continue;
         } 
-        sym.reference.args.push(arena, tok.str);
+        this->reference.args.push(arena, tok.str);
     } while ((tok = tokens->inc_no_whitespace()).type != Token_Colon);
     
     tok = tokens->inc_no_whitespace();
-    sym.reference.gen_name = tok.str;
-    
-    return sym;
+    this->reference.gen_name = tok.str;
 }
 
-StyxSymbol parse_symbol(StyxTokenizer *tokens, MemoryArena *arena)
+StyxSymbol::StyxSymbol(MemoryArena *allocator, StyxTokenizer *tokens)
 {
+    // How about let's just zero it from here and keep it simple?
+    memory_set(this, 0, sizeof(StyxSymbol));
+
     auto tok = tokens->inc_no_whitespace();
     
     auto tok_identifier = tok.str;
@@ -142,9 +123,9 @@ StyxSymbol parse_symbol(StyxTokenizer *tokens, MemoryArena *arena)
     
     tok = tokens->inc_no_whitespace();
     if (tok.type == Token_FeedLeft) {
-        return parse_symbol_declaration(tokens, arena, tok_identifier, tok_line);
+        parse_declaration(tokens, allocator, tok_identifier, tok_line);
     } else {
-        return parse_symbol_reference(tokens, arena, tok_identifier, tok_line);
+        parse_reference(tokens, allocator, tok_identifier, tok_line);
     }
 }
 

@@ -35,7 +35,7 @@ void handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
 	auto ext = file_ext(file_abspath);
 	
 	CompilationSettings settings{};
-	auto table = create_symbol_table(temp_allocator);
+	StyxSymbolTable table(temp_allocator);
 	StyxTokenizer tokens(temp_allocator, file_abspath);
 	
     auto time_start = get_time();
@@ -48,8 +48,8 @@ void handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
                 auto next_tok = tokens.inc_no_whitespace();
                 settings.output_name = Str8(temp_allocator, next_tok.str);
             } else if (str8_compare(tok.str, str8_lit("@template"))) {
-                auto sym = parse_symbol(&tokens, temp_allocator);
-                symbol_table_push(&table, temp_allocator, sym);
+                StyxSymbol sym(temp_allocator, &tokens);
+                table.push(temp_allocator, sym);
             }
         }
     }
@@ -66,8 +66,7 @@ void handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
     for (auto ref = table.references.head;
          ref;
          ref = ref->next) {
-        auto template_symbol =
-            symbol_table_lookup(&table, ref->reference.identifier);
+        auto template_symbol = table.lookup(ref->reference.identifier);
         
         auto param_count = template_symbol.declaration.params.count;
         auto arg_count = ref->reference.args.count;

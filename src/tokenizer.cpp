@@ -276,18 +276,3 @@ StyxToken StyxTokenizer::inc_no_comment()
 	}
 	return tok;
 }
-
-StyxTokenizerState store_tokenizer_state(StyxTokenizer *tokens)
-{
-    return StyxTokenizerState{
-        tokens->offset, tokens->next_offset, tokens->line_at,
-    };
-}
-
-void restore_tokenizer_state(StyxTokenizerState state, StyxTokenizer *tokens)
-{
-    tokens->offset = state.offset;
-    tokens->next_offset = state.next_offset;
-    tokens->line_at = state.line_at;
-}
-

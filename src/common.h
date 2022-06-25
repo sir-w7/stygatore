@@ -282,15 +282,15 @@ b32 str8_compare(Str8 str1, Str8 str2);
 struct Str8Node
 {
 	Str8 data;
-	Str8Node *next;
+	Str8Node *next = nullptr;
 };
 
 struct Str8List
 {
-	Str8Node *head;
-	Str8Node *tail;
+	Str8Node *head = nullptr;
+	Str8Node *tail = nullptr;
     
-    u64 count;
+    u64 count = 0;
 
     void push(MemoryArena *arena, Str8 str);
 };
