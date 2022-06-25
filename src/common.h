@@ -244,9 +244,12 @@ struct MemoryArena
 
     void reset();
     void *push_align(u64 size, u32 align);
+    void *push_initialize_align(u64 size, void *init_data, u32 align);
     void *push_pack(u64 size);
 
     void *push(u64 size) { return push_align(size, DEF_ALIGN); }
+    void *push_initialize(u64 size, void *init_data) { return push_initialize_align(size, init_data, DEF_ALIGN); }
+
     void *push_array(u64 size, u64 count) { return push(size * count); }
 };
 

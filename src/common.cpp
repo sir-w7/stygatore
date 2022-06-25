@@ -76,9 +76,23 @@ void *MemoryArena::push_align(u64 size, u32 align)
 	
 	memory_set(ptr, 0, size);
 
-    return ptr;    
+    return ptr;
 }
 
+void *MemoryArena::push_initialize_align(u64 size, void *init_data, u32 align)
+{
+	uintptr_t curr_ptr = (uintptr_t)mem + (uintptr_t)offset;
+	uintptr_t offset = align_forth(curr_ptr, align);
+	offset -= (uintptr_t)mem;
+	
+	assert(offset + size <= this->size);
+	void *ptr = &mem[offset];
+	this->offset = offset + size;
+	
+	memory_copy(ptr, init_data, size);
+
+    return ptr;
+}
 void *MemoryArena::push_pack(u64 size)
 {
     assert(offset + size <= this->size);

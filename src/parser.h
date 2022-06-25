@@ -1,33 +1,25 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-// NOTE(sir->w7): Is runtime polymorphism really necessary here?
-enum StyxSymbolType
-{
-    Symbol_Declaration,
-    Symbol_Reference,
-};
-
 struct StyxSymbol
 {
-    StyxSymbolType type;
-
     Str8 identifier;
-    u64 line;
+    u64 line = 0;
 
-    StyxSymbol *next;
+    StyxSymbol *next = nullptr;
 
-    virtual void parse();
+    virtual void print() {}
 };
 
 struct StyxDeclaration: public StyxSymbol
 {
     Str8List params;
 
-    StyxToken *definition;
-    u64 tok_count;
+    StyxToken *definition = nullptr;
+    u64 tok_count = 0;
 
-    void parse();
+    StyxDeclaration(StyxTokenizer *tokens, MemoryArena *allocator, Str8 tok_identifier, u64 tok_line);
+    void print() override;
 };
 
 struct StyxReference: public StyxSymbol
@@ -35,38 +27,8 @@ struct StyxReference: public StyxSymbol
     Str8List args;
     Str8 gen_name;
 
-    void parse();
-};
-
-struct StyxSymbol
-{
-    StyxSymbolType type;
-    StyxSymbol *next;
-    
-    union {
-        struct {
-            Str8 identifier;
-            u64 line;
-            
-            Str8List params;
-            
-            StyxToken *definition;
-            u64 tok_count;
-        } declaration;
-        struct {
-            Str8 identifier;
-            u64 line;
-            
-            Str8List args;
-            Str8 gen_name;
-        } reference;
-    };
-
-    StyxSymbol() {}
-    StyxSymbol(MemoryArena *allocator, StyxTokenizer *tokens);
-private:
-    void parse_declaration(StyxTokenizer *tokens, MemoryArena *allocator, Str8 tok_identifier, u64 tok_line);
-    void parse_reference(StyxTokenizer *tokens, MemoryArena *allocator, Str8 tok_identifier, u64 tok_line);
+    StyxReference(StyxTokenizer *tokens, MemoryArena *allocator, Str8 tok_identifier, u64 tok_line);
+    void print() override;
 };
 
 #define INITIAL_CAPACITY 32
@@ -74,23 +36,24 @@ private:
 
 struct StyxSymbolTable
 {
-	StyxSymbol *syms = nullptr;
+	StyxDeclaration **syms = nullptr;
     
 	struct {
-        StyxSymbol *head = nullptr;
-        StyxSymbol *tail = nullptr;
+        StyxReference *head = nullptr;
+        StyxReference *tail = nullptr;
     } references;
     
 	u32 size = 0;
 	u32 capacity = INITIAL_CAPACITY;
 
     StyxSymbolTable(MemoryArena *allocator) {
-        syms = (StyxSymbol *)allocator->push_array(sizeof(StyxSymbol), capacity);
+        syms = (StyxDeclaration **)allocator->push_array(sizeof(StyxDeclaration *), capacity);
     }
-    void push(MemoryArena *allocator, StyxSymbol sym);
-    StyxSymbol lookup(Str8 identifier);
+
+    void push(MemoryArena *allocator, StyxSymbol *sym);
+    StyxSymbol *lookup(Str8 identifier);
 };
 
-void symbol_print(StyxSymbol sym);
+StyxSymbol *parse_next(StyxTokenizer *tokenizer, MemoryArena *allocator);
 
 #endif

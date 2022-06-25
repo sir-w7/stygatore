@@ -48,7 +48,7 @@ void handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
                 auto next_tok = tokens.inc_no_whitespace();
                 settings.output_name = Str8(temp_allocator, next_tok.str);
             } else if (str8_compare(tok.str, str8_lit("@template"))) {
-                StyxSymbol sym(temp_allocator, &tokens);
+                auto sym = parse_next(&tokens, temp_allocator);
                 table.push(temp_allocator, sym);
             }
         }
@@ -65,11 +65,11 @@ void handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
     
     for (auto ref = table.references.head;
          ref;
-         ref = ref->next) {
-        auto template_symbol = table.lookup(ref->reference.identifier);
+         ref = dynamic_cast<StyxReference *>(ref->next)) {
+        auto template_symbol = dynamic_cast<StyxDeclaration *>(table.lookup(ref->identifier));
         
-        auto param_count = template_symbol.declaration.params.count;
-        auto arg_count = ref->reference.args.count;
+        auto param_count = template_symbol->params.count;
+        auto arg_count = ref->args.count;
         
         if (param_count != arg_count) {
             fprintln(stderr, "Incorrect number of arguments for parameters.");
@@ -80,8 +80,8 @@ void handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
         auto params = (Str8 *)temp_allocator->push_array(sizeof(Str8), param_count);
         auto args = (Str8 *)temp_allocator->push_array(sizeof(Str8), arg_count);
 
-        auto param_node = template_symbol.declaration.params.head;
-        auto arg_node = ref->reference.args.head;
+        auto param_node = template_symbol->params.head;
+        auto arg_node = ref->args.head;
         for (u32 i = 0; i < param_count; ++i) {
             params[i] = param_node->data;
             args[i] = arg_node->data;
@@ -92,7 +92,7 @@ void handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
         
         {
             TempArena scratch(temp_allocator);
-            auto comment = Str8(temp_allocator, ref->reference.identifier);
+            auto comment = Str8(temp_allocator, ref->identifier);
             comment = push_str8_concat(temp_allocator, comment, str8_lit(" -> "));
             
             for (u32 i = 0; i < arg_count; ++i) {
@@ -103,17 +103,17 @@ void handle_file(MemoryArena *temp_allocator, Str8 file_relpath)
             }
             
             comment = push_str8_concat(temp_allocator, comment, str8_lit(": "));
-            comment = push_str8_concat(temp_allocator, comment, ref->reference.gen_name);
+            comment = push_str8_concat(temp_allocator, comment, ref->gen_name);
             
             insert_comment(file, file_ext(settings.output_name), comment);
         }
         
-        for (u64 i = 0; i < template_symbol.declaration.tok_count; ++i) {
-            auto tok = template_symbol.declaration.definition[i];
+        for (u64 i = 0; i < template_symbol->tok_count; ++i) {
+            auto tok = template_symbol->definition[i];
             if (tok.type == Token_StyxDirective) {
                 Str8 dir_str{tok.str.str + 1, tok.str.len - 1};
                 if (str8_compare(dir_str, str8_lit("t_name"))) {
-                    fprintf(file, "%.*s", str8_exp(ref->reference.gen_name));
+                    fprintf(file, "%.*s", str8_exp(ref->gen_name));
                 } else {
                     u32 idx = 0;
                     for (; idx < param_count; ++idx) {
