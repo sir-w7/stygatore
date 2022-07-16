@@ -116,12 +116,6 @@
 # define STYX_ARCH_ARM 0
 #endif
 
-#if defined(NDEBUG)
-# define STYX_RELEASE 1 
-#else
-# define STYX_DEBUG 1
-#endif
-
 #if !defined(STYX_RELEASE)
 # define STYX_RELEASE 0
 #endif
@@ -165,7 +159,6 @@ typedef u64 b64;
 # define styx_inline static inline
 #endif
 
-#if STYX_LANG_CPP
 // NOTE(sir->w7): Stolen from Jon Blow.
 
 template <typename T>
@@ -185,10 +178,6 @@ struct ExitScopeHelp {
 };
 
 #define defer const auto& concat(defer__, __COUNTER__) = ExitScopeHelp() + [&]()
-
-#else
-# error "No defer mechanism implemented."
-#endif
 
 #define kilobytes(count) (1024ull * (u64)count)
 #define megabytes(count) (1024ull * (u64)kilobytes(count))
@@ -240,6 +229,8 @@ struct MemoryArena
 	u64 offset;
 
     MemoryArena(u64 size);
+    MemoryArena(MemoryArena *parent_arena, u64 size);
+    
     ~MemoryArena();
 
     void reset();
@@ -251,6 +242,9 @@ struct MemoryArena
     void *push_initialize(u64 size, void *init_data) { return push_initialize_align(size, init_data, DEF_ALIGN); }
 
     void *push_array(u64 size, u64 count) { return push(size * count); }
+
+private:
+    inline void *push_ptr(u64 size, u32 align);
 };
 
 struct TempArena

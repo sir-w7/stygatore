@@ -1,6 +1,7 @@
 #include "common.h"
 #include "tokenizer.h"
 #include "parser.h"
+#include "platform.h"
 
 StyxDeclaration::StyxDeclaration(StyxTokenizer *tokens, MemoryArena *allocator,
                                  Str8 tok_identifier, u64 tok_line)
@@ -138,12 +139,20 @@ StyxSymbol *parse_next(StyxTokenizer *tokens, MemoryArena *allocator)
     tok = tokens->inc_no_whitespace();
 
     if (tok.type == Token_FeedLeft) {
+        StyxDeclaration *decl;
+        
+profile_block("parsing declaration") {
         auto declaration = StyxDeclaration(tokens, allocator, tok_identifier, tok_line);
-        auto sym = (StyxDeclaration *)allocator->push_initialize(sizeof(StyxDeclaration), &declaration);
-        return sym;
+        decl = (StyxDeclaration *)allocator->push_initialize(sizeof(StyxDeclaration), &declaration);
+};
+        return decl;
     } else {
+        StyxReference *ref;
+
+profile_block("parsing reference") {
         auto reference = StyxReference(tokens, allocator, tok_identifier, tok_line);
-        auto sym = (StyxReference *)allocator->push_initialize(sizeof(StyxReference), &reference);
-        return sym;
+        ref = (StyxReference *)allocator->push_initialize(sizeof(StyxReference), &reference);
+};
+        return ref;
     }
 }

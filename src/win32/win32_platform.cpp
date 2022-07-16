@@ -4,6 +4,97 @@
 #include "../common.h"
 #include "../platform.h"
 
+struct ThreadPool
+{
+	ThreadContext thr_ctx;
+
+	HANDLE thread;
+	HANDLE semaphore;
+
+	Str8 data[16];
+	HandleFunc *jobs[16];
+
+	u32 write_at = 0;
+	u32 read_at = 0;
+
+	u32 job_cnt = 0;
+
+	bool running;
+};
+
+struct ThreadPools
+{
+	ThreadPool *pools;
+	u32 cnt;
+} pools;
+
+static DWORD WINAPI thread_proc(LPVOID param)
+{
+	auto thr_pool = static_cast<ThreadPool *>(param);
+	while (thr_pool->running || thr_pool->job_cnt > 0) {
+		WaitForSingleObject(thr_pool->semaphore, INFINITE);
+		if (thr_pool->running == false && thr_pool->job_cnt == 0) {
+			break;
+		}
+
+		thr_pool->jobs[thr_pool->read_at](&thr_pool->thr_ctx.allocator,
+		                                  &thr_pool->thr_ctx.temp_allocator,
+		                                  thr_pool->data[thr_pool->read_at]);
+		thr_pool->read_at++;
+		thr_pool->job_cnt--;
+	}
+	return 0;
+}
+
+void init_pools(MemoryArena *lord_allocator, u32 cnt)
+{
+	pools.pools = (ThreadPool *)lord_allocator->push_array(sizeof(ThreadPool), cnt);
+	pools.cnt = cnt;
+
+	for (int i = 0; i < cnt; ++i) {
+		pools.pools[i].running = true;
+
+		pools.pools[i].thr_ctx.allocator = MemoryArena(lord_allocator, megabytes(128));
+		pools.pools[i].thr_ctx.temp_allocator = MemoryArena(lord_allocator, megabytes(256));
+
+		pools.pools[i].semaphore = CreateSemaphoreA(NULL, 0, 16, NULL);
+		pools.pools[i].thread = CreateThread(NULL, 0, thread_proc, &pools.pools[i], 0, 0);
+	}
+}
+
+void queue_job(HandleFunc *func, Str8 data)
+{
+	// Let's pretend there's two jobs.
+	int idx = 0;
+	if (pools.pools[1].job_cnt > pools.pools[0].job_cnt) {
+		idx = 1;
+	}
+
+	auto pool = &pools.pools[idx];
+	pool->job_cnt++;
+
+	pool->jobs[pool->write_at] = func;
+	pool->data[pool->write_at] = data;
+	pool->write_at++;
+
+	ReleaseSemaphore(pool->semaphore, 1, NULL);
+}
+
+void wait_pools()
+{
+	for (int i = 0; i < pools.cnt; ++i) {
+		WaitForSingleObject(pools.pools[i].thread, INFINITE);
+	}
+}
+
+void send_kill_signals()
+{
+	for (int i = 0; i < pools.cnt; ++i) {
+		pools.pools[i].running = false;
+		ReleaseSemaphore(pools.pools[i].semaphore, 1, NULL);
+	}
+}
+
 f64 get_time()
 {
 	static LARGE_INTEGER performance_frequency = {};
@@ -17,6 +108,7 @@ f64 get_time()
 
 void *reserve_mem(u64 size) 
 {
+	profile_def("reserve_mem");
 	return VirtualAlloc(0, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 }
 

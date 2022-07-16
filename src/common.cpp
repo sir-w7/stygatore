@@ -53,6 +53,14 @@ MemoryArena::MemoryArena(u64 size)
     offset = 0;
 }
 
+MemoryArena::MemoryArena(MemoryArena *parent_arena, u64 size)
+{
+	mem = (u8 *)parent_arena->push_ptr(size, DEF_ALIGN);
+	
+	this->size = size;
+	offset = 0;
+}
+
 MemoryArena::~MemoryArena()
 {
 	free_mem(mem, size);
@@ -64,7 +72,7 @@ void MemoryArena::reset()
     offset = 0;
 }
 
-void *MemoryArena::push_align(u64 size, u32 align)
+inline void *MemoryArena::push_ptr(u64 size, u32 align)
 {
 	uintptr_t curr_ptr = (uintptr_t)mem + (uintptr_t)offset;
 	uintptr_t offset = align_forth(curr_ptr, align);
@@ -73,7 +81,13 @@ void *MemoryArena::push_align(u64 size, u32 align)
 	assert(offset + size <= this->size);
 	void *ptr = &mem[offset];
 	this->offset = offset + size;
-	
+
+	return ptr;
+}
+
+void *MemoryArena::push_align(u64 size, u32 align)
+{
+	auto ptr = push_ptr(size, align);
 	memory_set(ptr, 0, size);
 
     return ptr;
@@ -81,18 +95,12 @@ void *MemoryArena::push_align(u64 size, u32 align)
 
 void *MemoryArena::push_initialize_align(u64 size, void *init_data, u32 align)
 {
-	uintptr_t curr_ptr = (uintptr_t)mem + (uintptr_t)offset;
-	uintptr_t offset = align_forth(curr_ptr, align);
-	offset -= (uintptr_t)mem;
-	
-	assert(offset + size <= this->size);
-	void *ptr = &mem[offset];
-	this->offset = offset + size;
-	
+	auto ptr = push_ptr(size, align);	
 	memory_copy(ptr, init_data, size);
 
     return ptr;
 }
+
 void *MemoryArena::push_pack(u64 size)
 {
     assert(offset + size <= this->size);
