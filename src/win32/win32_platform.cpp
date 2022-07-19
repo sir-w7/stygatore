@@ -11,8 +11,8 @@ struct ThreadPool
 	HANDLE thread;
 	HANDLE semaphore;
 
-	Str8 data[16];
-	HandleFunc *jobs[16];
+	Str8 data[128];
+	HandleFunc *jobs[128];
 
 	u32 write_at = 0;
 	u32 read_at = 0;

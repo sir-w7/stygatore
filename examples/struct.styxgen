@@ -18,7 +18,7 @@ struct @t_name
 	@T w;
 };
 
-@template Vec3 <- (T, func_name)
+@template Vec3 <- (T, new, norm)
 typedef struct @t_name @t_name;
 struct @t_name
 {
@@ -27,9 +27,21 @@ struct @t_name
 	@T z;
 };
 
-static inline @t_name @func_name(@T x, @T y, @T z)
+static inline @t_name @new(@T x, @T y, @T z)
 {
 	return (@t_name){.x = x, .y = y, .z = z};
+}
+
+static inline @t_name @norm(@t_name vector)
+{
+    @t_name result = {0};
+	
+    f32 len = sqrt((f32)(vector.x ^ 2) + (f32)(vector.y ^ 2) + (f32)(vector.z ^ 2));
+    vector.x = (@T)((f32)vector.x / len);
+    vector.y = (@T)((f32)vector.y / len);
+    vector.z = (@T)((f32)vector.z / len);
+    
+    return result;
 }
 
 @template Vec2 <- T
@@ -43,8 +55,8 @@ struct @t_name
 @template Vec4 -> f32: Vec4f
 @template Vec4 -> u8: Vec4c
 
-@template Vec3 -> f32, new_vec3f: Vec3f
-@template Vec3 -> u8, new_vec3c: Vec3c
+@template Vec3 -> f32, new_vec3f, vec3f_norm: Vec3f
+@template Vec3 -> u8, new_vec3c, vec3c_norm: Vec3c
 
 @template Vec2 -> f32: Vec2f
 @template Vec2 -> u16: Vec2Coords
