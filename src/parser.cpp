@@ -141,18 +141,18 @@ StyxSymbol *parse_next(StyxTokenizer *tokens, MemoryArena *allocator)
     if (tok.type == Token_FeedLeft) {
         StyxDeclaration *decl;
         
-profile_block("parsing declaration") {
-        auto declaration = StyxDeclaration(tokens, allocator, tok_identifier, tok_line);
-        decl = (StyxDeclaration *)allocator->push_initialize(sizeof(StyxDeclaration), &declaration);
-};
+        profile_block("parsing declaration") {
+            auto declaration = StyxDeclaration(tokens, allocator, tok_identifier, tok_line);
+            decl = (StyxDeclaration *)allocator->push_initialize(sizeof(StyxDeclaration), &declaration);
+        };
         return decl;
     } else {
         StyxReference *ref;
 
-profile_block("parsing reference") {
-        auto reference = StyxReference(tokens, allocator, tok_identifier, tok_line);
-        ref = (StyxReference *)allocator->push_initialize(sizeof(StyxReference), &reference);
-};
+        profile_block("parsing reference") {
+            auto reference = StyxReference(tokens, allocator, tok_identifier, tok_line);
+            ref = (StyxReference *)allocator->push_initialize(sizeof(StyxReference), &reference);
+        };
         return ref;
     }
 }

@@ -8,7 +8,7 @@
 
 struct CompilationSettings
 {
-	Str8 output_name;
+    Str8 output_name;
     Str8 comment_keyword;
 };
 
@@ -26,27 +26,20 @@ void insert_comment(FILE *file, Str8 ext, Str8 comment)
 }
 
 void handle_file(MemoryArena *allocator, MemoryArena *temp_allocator, 
-                 Str8 file_relpath)
-{
-    auto file_abspath = get_file_abspath(temp_allocator, file_relpath);
-    
+                 Str8 file_abspath)
+{ 
     auto working_dir = file_working_dir(file_abspath);
-	auto base_name = file_base_name(file_abspath);
+    auto base_name = file_base_name(file_abspath);
     auto filename = file_name(file_abspath);
-	auto ext = file_ext(file_abspath);
-	
-#if STYX_DEBUG
-    println("%.*s", str8_exp(filename));
-#else
-    printf("%.*s", str8_exp(filename));
-#endif
-    
-	CompilationSettings settings{};
-	StyxSymbolTable table(temp_allocator);
-	StyxTokenizer tokens(temp_allocator, file_abspath);
-	
+    auto ext = file_ext(file_abspath);
+
     auto time_start = get_time();
-    
+    defer { println("%.*s <- %.03f ms", str8_exp(filename), get_time() - time_start); };
+
+    CompilationSettings settings{};
+    StyxSymbolTable table(temp_allocator);
+    StyxTokenizer tokens(temp_allocator, file_abspath);
+        
     profile_block("lexing and parsing in one") {
         for (auto tok = tokens.get_at();
              tok.type != Token_EndOfFile;
@@ -66,7 +59,8 @@ void handle_file(MemoryArena *allocator, MemoryArena *temp_allocator,
     
     auto output_filename = push_str8_concat(temp_allocator, working_dir, settings.output_name);
     
-    auto file = fopen(output_filename.str, "w");
+    FILE *file;
+    auto err = fopen_s(&file, output_filename.str, "w");
     defer { fclose(file); };
     
     insert_comment(file, file_ext(settings.output_name), 
@@ -143,56 +137,47 @@ void handle_file(MemoryArena *allocator, MemoryArena *temp_allocator,
             fprintf(file, "\n\n");
         }
     };
-    
-    printf(" <- %.03f ms\n", get_time() - time_start);
-#if STYX_DEBUG
-    printnl();
-#endif
-}
-
-void handle_dir(MemoryArena *allocator, MemoryArena *temp_allocator,
-                Str8 dir)
-{
-	auto files = get_dir_list_ext(allocator, dir, str8_lit(STYX_EXT));
-	
-	str8list_it(file, files) {
-        temp_allocator->reset();
-		handle_file(allocator, temp_allocator, file->data);
-	}
 }
 
 int main(int argc, char **argv)
-{
-    auto time_start = get_time();
-    defer { println("stygatore -> %.03f ms", get_time() - time_start); };
-	if (argc == 1) {
-		println("stygatore is a sane, performant metaprogramming tool for language-agnostic generics with readable diagnostics for maximum developer productivity.");
-		printnl();
-		println("Usage: %s [files/directories]", argv[0]);
-	}
+{ profile_def();
+    if (argc == 1) {
+        println("stygatore is a sane, performant metaprogramming tool for language-agnostic generics with readable diagnostics for maximum developer productivity.");
+        printnl();
+        println("Usage: %s [files/directories]", argv[0]);
+        return 0;
+    }
 	
     MemoryArena lord_allocator(gigabytes(1));
 
-	MemoryArena allocator(&lord_allocator, megabytes(16));
-	MemoryArena temp_allocator(&lord_allocator, megabytes(32));
+    MemoryArena allocator(&lord_allocator, megabytes(16));
+    MemoryArena temp_allocator(&lord_allocator, megabytes(32));
 
-profile_block("stygatore") {
     init_pools(&lord_allocator, 2);
-	auto args = arg_list(&allocator, argc, argv);
-    
-	str8list_it(arg, args) {
-		temp_allocator.reset();
-		if (is_file(arg->data)) {
-            queue_job(handle_file, arg->data);
-		} else if (is_dir(arg->data)) {
-            queue_job(handle_dir, arg->data); 
-		} else {
-			fprintln(stderr, "Argument is neither a file nor a directory.");
-		}
-	}
+    auto args = arg_list(&allocator, argc, argv);
+
+    // Expand the directories and files into a new Str8List before we actually start generating code.
+    Str8List file_list{};
+    str8list_it(arg, args) {
+        if (is_file(arg->data)) {
+            // queue_job(handle_file, arg->data);
+            auto file_abspath = get_file_abspath(&allocator, arg->data);
+            file_list.push(&allocator, file_abspath);
+        } else if (is_dir(arg->data)) {
+            // queue_job(handle_dir, arg->data);
+            file_list.push(get_dir_list_ext(&allocator, arg->data, str8_lit(STYX_EXT)));
+        } else {
+            fprintln(stderr, "Argument is neither a file nor a directory.");
+        }
+    }
+
+    str8list_it(file, file_list) {
+        //println("%.*s", str8_exp(file->data));
+        queue_job(handle_file, file->data);
+    }
     
     profile_block("send_kill_signals") { send_kill_signals(); };
     profile_block("wait_pools") { wait_pools(); };
-};
+
     return 0;
 }

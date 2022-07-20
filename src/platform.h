@@ -14,10 +14,10 @@ Str8List get_dir_list_ext(MemoryArena *allocator, Str8 dir, Str8 ext);
 
 struct ThreadContext
 {
-	u32 thr_idx;
+    u32 thr_idx;
 
-	MemoryArena allocator;
-	MemoryArena temp_allocator;
+    MemoryArena allocator;
+    MemoryArena temp_allocator;
 };
 
 typedef void HandleFunc(MemoryArena *, MemoryArena *, Str8);
@@ -27,32 +27,34 @@ void queue_job(HandleFunc *func, Str8 data);
 void wait_pools();
 void send_kill_signals();
 
+// Does the profiler implementation really belong in platform.h? It's not really a platform thing, probably more of a shared thing. 
 template <typename T>
 struct Profiler {
     Profiler(T lambda, Str8 identifier) {
     	auto time_start = get_time();
     	lambda();
-    	println("    -- INFO (styx_profiler): %.*s - %f ms.", str8_exp(identifier), get_time() - time_start);
+    	println("    LOG (styx_profiler): %.*s -> %f ms.", str8_exp(identifier), get_time() - time_start);
     }
 };
 
 struct ProfilerHelper {
-	Str8 identifier;
+    Str8 identifier;
 
-	ProfilerHelper(Str8 identifier) : identifier(identifier) {}
+    ProfilerHelper(Str8 identifier) : identifier(identifier) {}
 
     template <typename T>
     Profiler<T> operator+(T t){ return Profiler<T>(t, identifier); }
 };
 
 #if STYX_DEBUG
-	#define profile_block(block_name) ProfilerHelper(str8_lit(block_name)) + [&]()
-	#define profile_def(name) \
-		auto __time_start_##__LINE__ = get_time(); \
-		defer { println("    -- INFO (styx_profiler): " name " - %f ms.", get_time() - __time_start_##__LINE__); }
+# define profile_block(block_name) ProfilerHelper(str8_lit(block_name)) + [&]()
+# define profile_def()                                               \
+    auto __time_start_##__LINE__ = get_time();                       \
+    defer { println("    LOG (styx_profiler): %s -> %f ms.", STYX_FUNCTION_NAME, get_time() - __time_start_##__LINE__); }
 #else
-	#define profile_block(block_name)
-	#define profile_def(name)
+# define profile_block(block_name)
+# define profile_def(name)
 #endif
 
 #endif
+

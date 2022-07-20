@@ -5,26 +5,7 @@
 #include <stdint.h>
 #include <assert.h>
 
-#if defined(_MSC_VER)
-# define STYX_COMPILER_MSVC 1
-
-# if defined(_WIN32)
-#  define STYX_OS_WINDOWS 1
-# else
-#  error "Unknown OS."
-# endif
-
-# if defined(_M_AMD64)
-#  define STYX_ARCH_X64 1
-# elif defined(_M_I86)
-#  define STYX_ARCH_X86 1
-# elif defined(_M_AMD64)
-#  define STYX_ARCH_ARM
-# else
-#  error "Unknown arch."
-# endif
-
-#elif defined(__clang__)
+#if defined(__clang__)
 # define STYX_COMPILER_CLANG 1
 
 # if defined(_WIN32)
@@ -65,6 +46,25 @@
 # elif defined(__i386__)
 #  define STYX_ARCH_X86 1
 # elif defined(__arm__)
+#  define STYX_ARCH_ARM
+# else
+#  error "Unknown arch."
+# endif
+
+#elif defined(_MSC_VER)
+# define STYX_COMPILER_MSVC 1
+
+# if defined(_WIN32)
+#  define STYX_OS_WINDOWS 1
+# else
+#  error "Unknown OS."
+# endif
+
+# if defined(_M_AMD64)
+#  define STYX_ARCH_X64 1
+# elif defined(_M_I86)
+#  define STYX_ARCH_X86 1
+# elif defined(_M_AMD64)
 #  define STYX_ARCH_ARM
 # else
 #  error "Unknown arch."
@@ -159,8 +159,13 @@ typedef u64 b64;
 # define styx_inline static inline
 #endif
 
-// NOTE(sir->w7): Stolen from Jon Blow.
+#if STYX_COMPILER_CLANG
+# define STYX_FUNCTION_NAME __PRETTY_FUNCTION__
+#else
+# define STYX_FUNCTION_NAME __func__
+#endif
 
+// NOTE(sir->w7): Stolen from Jon Blow.
 template <typename T>
 struct ExitScope {
     T lambda;
@@ -168,8 +173,8 @@ struct ExitScope {
     ~ExitScope() { lambda(); }
     //ExitScope(const ExitScope&);
     
-    private:
-    	ExitScope& operator=(const ExitScope&);
+private:
+    ExitScope& operator=(const ExitScope&);
 };
 
 struct ExitScopeHelp {
@@ -209,7 +214,7 @@ struct ExitScopeHelp {
 #define min(a, b) (a > b ? b : a)
 #endif 
 
-#define defer_block(start, end) \
+#define defer_block(start, end)                                         \
     for (int _i_##__LINE__ = ((start), 0);  _i_##__LINE__ == 0; _i_##__LINE__ += 1, (end))
 
 //-------------------------------Memory-------------------------------
@@ -223,11 +228,12 @@ void memory_set(void* ptr, u32 value, u64 size);
 // NOTE(sir->w7): prev_offset isn't really used in this codebase since we never really have to resize memory or anything.
 struct MemoryArena
 {
-	u8 *mem;
-	u64 size;
+    u8 *mem;
+    u64 size;
     
-	u64 offset;
+    u64 offset;
 
+    MemoryArena() {}
     MemoryArena(u64 size);
     MemoryArena(MemoryArena *parent_arena, u64 size);
     
@@ -249,8 +255,8 @@ private:
 
 struct TempArena
 { 
-	MemoryArena *parent_arena;
-	u64 offset;
+    MemoryArena *parent_arena;
+    u64 offset;
 
     TempArena(MemoryArena *parent) :
         parent_arena(parent), offset(parent->offset) {}
@@ -260,8 +266,8 @@ struct TempArena
 //-------------------------------String-------------------------------
 struct Str8
 {
-	char *str;
-	u64 len;
+    char *str;
+    u64 len;
 
     Str8() : str(nullptr), len(0) {}
     Str8(char *cstr, u64 len) : str(cstr), len(len) {}
@@ -278,21 +284,22 @@ b32 str8_compare(Str8 str1, Str8 str2);
 
 struct Str8Node
 {
-	Str8 data;
-	Str8Node *next = nullptr;
+    Str8 data;
+    Str8Node *next = nullptr;
 };
 
 struct Str8List
 {
-	Str8Node *head = nullptr;
-	Str8Node *tail = nullptr;
+    Str8Node *head = nullptr;
+    Str8Node *tail = nullptr;
     
     u64 count = 0;
 
     void push(MemoryArena *arena, Str8 str);
+    void push(Str8List list);
 };
 
-#define str8list_it(var, list) \
+#define str8list_it(var, list)                          \
     for (auto var = list.head; var; var = var->next)
 
 #define str8_lit(string) (Str8((char *)string, sizeof(string) - 1))
