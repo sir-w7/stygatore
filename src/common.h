@@ -22,7 +22,7 @@
 #  define STYX_ARCH_X64 1
 # elif defined(__i386__)
 #  define STYX_ARCH_X86 1
-# elif defined(__arm__)
+# elif defined(__arm__) || defined(__arm64__)
 #  define STYX_ARCH_ARM 1
 # else
 #  error "Unknown arch."
@@ -277,6 +277,7 @@ struct Str8
 
 u64 cstr_len(char *cstr);
 
+// make this a method. 
 Str8 push_str8_concat(MemoryArena *allocator, Str8 init, Str8 add);
 
 // Returns true if the strings are the same, false if they are different.

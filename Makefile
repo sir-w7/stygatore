@@ -10,8 +10,8 @@ TARGET_EXE = stygatore
 BUILD_DIR = build
 SRC_DIR = src
 
-all:
-	$(CC) $(CFLAGS) src/stygatore.cpp -lstdc++ -o $(BUILD_DIR)/$(TARGET_EXE)
+$(BUILD_DIR)/$(TARGET_EXE):
+	$(CC) $(CFLAGS) src/stygatore.cpp src/common.cpp src/parser.cpp src/tokenizer.cpp src/linux/linux_platform.cpp -lstdc++ -o $(BUILD_DIR)/$(TARGET_EXE)
 
 .PHONY: clean test
 

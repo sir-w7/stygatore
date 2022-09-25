@@ -20,13 +20,11 @@ struct ThreadPool
     u32 job_cnt = 0;
 
     bool running;
-
-     ThreadPool(MemoryArena *lord_allocator);
 };
 
 struct ThreadPools
 {
-    ThreadPool *pools;
+    ThreadPool **pools;
     u32 cnt;
 } pools;
 
@@ -51,27 +49,34 @@ thread_proc(LPVOID param)
     return 0;
 }
 
-ThreadPool::ThreadPool(MemoryArena *lord_allocator)
+static ThreadPool *
+init_thread_pool(MemoryArena *lord_allocator)
 {
     static u32 thr_idx = 0;
-
-    memory_set(this, 0, sizeof(this));
+    ThreadPool *pool = (ThreadPool *)lord_allocator->push(sizeof(ThreadPool));
     
-    thr_ctx.thr_idx = thr_idx++;
-    thr_ctx.allocator = MemoryArena(lord_allocator, megabytes(128));
-    thr_ctx.temp_allocator = MemoryArena(lord_allocator, megabytes(256));
+    pool->thr_ctx.thr_idx = thr_idx++;
+    pool->thr_ctx.allocator = MemoryArena(lord_allocator, megabytes(128));
+    pool->thr_ctx.temp_allocator = MemoryArena(lord_allocator, megabytes(256));
 
-    semaphore = CreateSemaphoreA(NULL, 0, 16, NULL);
-    thread = CreateThread(NULL, 0, thread_proc, this, 0, 0);
+    pool->write_at = 0;
+    pool->read_at = 0;
+    pool->job_cnt = 0;
+    
+    pool->semaphore = CreateSemaphoreA(NULL, 0, 16, NULL);
+    pool->thread = CreateThread(NULL, 0, thread_proc, pool, 0, 0);
+
+    return pool;
 }
 
 void init_pools(MemoryArena *lord_allocator, u32 cnt)
 {
-    pools.pools = (ThreadPool *)lord_allocator->push_array(sizeof(ThreadPool), cnt);
+    profile_def();
+    pools.pools = (ThreadPool **)lord_allocator->push_array(sizeof(ThreadPool *), cnt);
     pools.cnt = cnt;
 
     for (int i = 0; i < cnt; ++i) {
-        pools.pools[i] = ThreadPool(lord_allocator);
+        pools.pools[i] = init_thread_pool(lord_allocator);
     }
 }
 
@@ -82,7 +87,7 @@ void queue_job(HandleFunc *func, Str8 data)
     if (idx > pools.cnt)
         idx = 0;
 
-    auto pool = &pools.pools[idx];
+    auto pool = pools.pools[idx];
     pool->job_cnt++;
 
     pool->jobs[pool->write_at] = func;
@@ -96,18 +101,20 @@ void queue_job(HandleFunc *func, Str8 data)
 
 void wait_pools()
 {
+    profile_def();
     for (int i = 0; i < pools.cnt; ++i) {
-        WaitForSingleObject(pools.pools[i].thread, INFINITE);
-        CloseHandle(pools.pools[i].thread);
-        CloseHandle(pools.pools[i].semaphore);
+        WaitForSingleObject(pools.pools[i]->thread, INFINITE);
+        CloseHandle(pools.pools[i]->thread);
+        CloseHandle(pools.pools[i]->semaphore);
     }
 }
 
 void send_kill_signals()
 {
+    profile_def();
     for (int i = 0; i < pools.cnt; ++i) {
-        pools.pools[i].running = false;
-        ReleaseSemaphore(pools.pools[i].semaphore, 1, NULL);
+        pools.pools[i]->running = false;
+        ReleaseSemaphore(pools.pools[i]->semaphore, 1, NULL);
     }
 }
 

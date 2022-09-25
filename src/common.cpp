@@ -268,9 +268,7 @@ Str8 file_ext(Str8 filename)
 Str8 read_file(MemoryArena *allocator, Str8 filename)
 { profile_def();
     Str8 file_data;
-    FILE *file;
-
-    auto err = fopen_s(&file, filename.str, "r");
+    FILE *file = fopen(filename.str, "r");
     if (file == NULL) {
         fprintln(stderr, "Failed to open file.");
         return file_data;

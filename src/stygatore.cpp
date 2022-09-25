@@ -1,4 +1,4 @@
-// NOTE(sir->w7): We should dump all the code into one big file just to make everything easier  A big jumbo file.
+// NOTE(sir->w7): We should dump all the code into one big file just to make everything easier. A big jumbo file.
 #include "common.h"
 #include "tokenizer.h"
 #include "parser.h"
@@ -56,11 +56,9 @@ void handle_file(MemoryArena *allocator, MemoryArena *temp_allocator,
         }
     };
     
-    
     auto output_filename = push_str8_concat(temp_allocator, working_dir, settings.output_name);
     
-    FILE *file;
-    auto err = fopen_s(&file, output_filename.str, "w");
+    FILE *file = fopen(output_filename.str, "w");
     defer { fclose(file); };
     
     insert_comment(file, file_ext(settings.output_name), 
@@ -142,7 +140,9 @@ void handle_file(MemoryArena *allocator, MemoryArena *temp_allocator,
 int main(int argc, char **argv)
 { profile_def();
     if (argc == 1) {
-        println("stygatore is a sane, performant metaprogramming tool for language-agnostic generics with readable diagnostics for maximum developer productivity.");
+        println("stygatore is a sane, performant metaprogramming tool for "
+                "language-agnostic generics with readable diagnostics for "
+                "maximum developer productivity.");
         printnl();
         println("Usage: %s [files/directories]", argv[0]);
         return 0;
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
     MemoryArena allocator(&lord_allocator, megabytes(16));
     MemoryArena temp_allocator(&lord_allocator, megabytes(32));
 
-    init_pools(&lord_allocator, 2);
+    //init_pools(&lord_allocator, 2);
     auto args = arg_list(&allocator, argc, argv);
 
     // Expand the directories and files into a new Str8List before we actually start generating code.
@@ -170,14 +170,13 @@ int main(int argc, char **argv)
             fprintln(stderr, "Argument is neither a file nor a directory.");
         }
     }
+	
+	str8list_it(file, file_list) {
+		handle_file(&allocator, &temp_allocator, file->data);
+	} 
 
-    str8list_it(file, file_list) {
-        //println("%.*s", str8_exp(file->data));
-        queue_job(handle_file, file->data);
-    }
-    
-    profile_block("send_kill_signals") { send_kill_signals(); };
-    profile_block("wait_pools") { wait_pools(); };
+    //send_kill_signals();
+    //wait_pools();
 
     return 0;
 }
